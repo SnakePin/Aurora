@@ -1591,6 +1591,10 @@
     <Content Include="Resources\RazerInstall\Step2.png" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\..\..\Visual Studio 2017\Projects\ClaymoreWrapper\ClaymoreWrapper\ClaymoreWrapper.vcxproj">
+      <Project>{e1ace60c-e65a-4fad-867d-6b5c113aa085}</Project>
+      <Name>ClaymoreWrapper</Name>
+    </ProjectReference>
     <ProjectReference Include="..\..\GlobalMouseKeyHook\MouseKeyHook\MouseKeyHook.csproj">
       <Project>{f52aa97e-180a-40ed-8f2b-09080171d6c7}</Project>
       <Name>MouseKeyHook</Name>
@@ -1598,10 +1602,6 @@
     <ProjectReference Include="..\..\NAudio\NAudio\NAudio.csproj">
       <Project>{da4f02e3-0b5e-42cd-b8d9-5583fa51d66e}</Project>
       <Name>NAudio</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\AuraSDKWrapper\AuraSDKWrapper.vcxproj">
-      <Project>{b4264bc5-a00d-4bc4-a409-0acdd46d2498}</Project>
-      <Name>AuraSDKWrapper</Name>
     </ProjectReference>
     <ProjectReference Include="..\ColorBox\ColorBox.csproj">
       <Project>{40085232-aced-4cbe-945b-90ba8153c151}</Project>

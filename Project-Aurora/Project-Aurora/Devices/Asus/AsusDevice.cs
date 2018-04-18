@@ -7,7 +7,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using Aurora.Settings;
 using System.Runtime.InteropServices;
-using AuraSDKWrapper;
+using ClaymoreWrapper;
+
 
 namespace Aurora.Devices.Asus
 {
@@ -17,6 +18,7 @@ namespace Aurora.Devices.Asus
         private String devicename = "Asus";
         private bool isInitialized = false;
         private bool wasInitializedOnce = false;
+        private bool isConnected = false;
 
         private bool keyboard_updated = false;
         private bool peripheral_updated = false;
@@ -25,22 +27,20 @@ namespace Aurora.Devices.Asus
         private Color previous_peripheral_Color = Color.Black;
         private long lastUpdateTime = 0;
 
+        ClaymoreSdk keyboard;
+
         public bool Initialize()
         {
 
-            AuraSDK auraSDK = new AuraSDK();
-            int result = auraSDK.DetectAuraDevices();
-            if (result != 0)
+            keyboard = new ClaymoreSdk();
+            if (!keyboard.Start())
             {
-                Console.WriteLine("Error during initialize: " + result);
+                Global.logger.Error("Asus: Failed to load DLL");
+                isConnected = true;
                 return false;
             }
 
-            Console.WriteLine("Asus Found " + auraSDK.MBControllersCount + " motherboard controller(s)");
-            Console.WriteLine("Asus Found " + auraSDK.GPUControllersCount + " gpu controller(s)");
-            Console.WriteLine("Asus Found keybaord: " + auraSDK.IsKeyboardPresent);
-            Console.WriteLine("Asus Found mouse: " + auraSDK.IsMousePresent);
-
+            keyboard.SetToSWMode();     // Take control of the keyboard
 
             isInitialized = true;
             wasInitializedOnce = true;
@@ -76,7 +76,7 @@ namespace Aurora.Devices.Asus
 
         public bool IsConnected()
         {
-            throw new NotImplementedException();
+            return IsConnected;
         }
 
         public bool IsInitialized()
@@ -96,17 +96,20 @@ namespace Aurora.Devices.Asus
 
         public bool Reconnect()
         {
-            throw new NotImplementedException();
+            keyboard.Stop();
+            keyboard.Start();
         }
 
         public void Reset()
         {
-            throw new NotImplementedException();
+            keyboard.Stop();
+            keyboard.Start();
         }
 
         public void Shutdown()
         {
-            throw new NotImplementedException();
+            keyboard.SetToHWMode();
+            keyboard.Stop();
         }
 
         public bool UpdateDevice(Dictionary<DeviceKeys, Color> keyColors, CancellationToken token, bool forced = false)

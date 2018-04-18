@@ -35,7 +35,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NAudio", "..\NAudio\NAudio\
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MouseKeyHook", "..\GlobalMouseKeyHook\MouseKeyHook\MouseKeyHook.csproj", "{F52AA97E-180A-40ED-8F2B-09080171D6C7}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "AuraSDKWrapper", "AuraSDKWrapper\AuraSDKWrapper.vcxproj", "{B4264BC5-A00D-4BC4-A409-0ACDD46D2498}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ClaymoreWrapper", "..\..\..\Visual Studio 2017\Projects\ClaymoreWrapper\ClaymoreWrapper\ClaymoreWrapper.vcxproj", "{E1ACE60C-E65A-4FAD-867D-6B5C113AA085}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -132,14 +132,14 @@ Global
 		{F52AA97E-180A-40ED-8F2B-09080171D6C7}.Release|x64.Build.0 = Release|x64
 		{F52AA97E-180A-40ED-8F2B-09080171D6C7}.Release|x86.ActiveCfg = Release|x86
 		{F52AA97E-180A-40ED-8F2B-09080171D6C7}.Release|x86.Build.0 = Release|x86
-		{B4264BC5-A00D-4BC4-A409-0ACDD46D2498}.Debug|x64.ActiveCfg = Debug|x64
-		{B4264BC5-A00D-4BC4-A409-0ACDD46D2498}.Debug|x64.Build.0 = Debug|x64
-		{B4264BC5-A00D-4BC4-A409-0ACDD46D2498}.Debug|x86.ActiveCfg = Debug|Win32
-		{B4264BC5-A00D-4BC4-A409-0ACDD46D2498}.Debug|x86.Build.0 = Debug|Win32
-		{B4264BC5-A00D-4BC4-A409-0ACDD46D2498}.Release|x64.ActiveCfg = Release|x64
-		{B4264BC5-A00D-4BC4-A409-0ACDD46D2498}.Release|x64.Build.0 = Release|x64
-		{B4264BC5-A00D-4BC4-A409-0ACDD46D2498}.Release|x86.ActiveCfg = Release|Win32
-		{B4264BC5-A00D-4BC4-A409-0ACDD46D2498}.Release|x86.Build.0 = Release|Win32
+		{E1ACE60C-E65A-4FAD-867D-6B5C113AA085}.Debug|x64.ActiveCfg = Debug|x64
+		{E1ACE60C-E65A-4FAD-867D-6B5C113AA085}.Debug|x64.Build.0 = Debug|x64
+		{E1ACE60C-E65A-4FAD-867D-6B5C113AA085}.Debug|x86.ActiveCfg = Debug|Win32
+		{E1ACE60C-E65A-4FAD-867D-6B5C113AA085}.Debug|x86.Build.0 = Debug|Win32
+		{E1ACE60C-E65A-4FAD-867D-6B5C113AA085}.Release|x64.ActiveCfg = Release|x64
+		{E1ACE60C-E65A-4FAD-867D-6B5C113AA085}.Release|x64.Build.0 = Release|x64
+		{E1ACE60C-E65A-4FAD-867D-6B5C113AA085}.Release|x86.ActiveCfg = Release|Win32
+		{E1ACE60C-E65A-4FAD-867D-6B5C113AA085}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
