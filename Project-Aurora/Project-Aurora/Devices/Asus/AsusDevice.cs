@@ -27,6 +27,10 @@ namespace Aurora.Devices.Asus
         private Color previous_peripheral_Color = Color.Black;
         private long lastUpdateTime = 0;
 
+        private int ledCount = 0;
+        byte[] colors;
+
+
         ClaymoreSdk keyboard;
 
         public bool Initialize()
@@ -36,12 +40,16 @@ namespace Aurora.Devices.Asus
             if (!keyboard.Start())
             {
                 Global.logger.Error("Asus: Failed to load DLL");
-                isConnected = true;
+                isConnected = false;
                 return false;
             }
+            ledCount = keyboard.GetLedCount() * 3;
+            colors = new byte[ledCount];
 
+            Global.logger.Info("Got Claymore Keyboard: " + ledCount + " leds");
             keyboard.SetToSWMode();     // Take control of the keyboard
 
+            isConnected = true;
             isInitialized = true;
             wasInitializedOnce = true;
             return true;
@@ -76,7 +84,7 @@ namespace Aurora.Devices.Asus
 
         public bool IsConnected()
         {
-            return IsConnected;
+            return isConnected;
         }
 
         public bool IsInitialized()
@@ -98,6 +106,7 @@ namespace Aurora.Devices.Asus
         {
             keyboard.Stop();
             keyboard.Start();
+            return true;
         }
 
         public void Reset()
@@ -108,26 +117,85 @@ namespace Aurora.Devices.Asus
 
         public void Shutdown()
         {
-            keyboard.SetToHWMode();
+            isInitialized = false;
             keyboard.Stop();
+        }
+
+        private void setColorMatrix()
+        {
+            keyboard.setKeyboardColor(colors);
+        }
+
+        private void updateClaymoreKeyColor(DeviceKeys key, Color color)
+        {
+
+                colors[KeyToClaymoreLedID(key)] = color.G;  // GREEN
+                colors[KeyToClaymoreLedID(key) + 1] = color.B; // BLUE
+                colors[KeyToClaymoreLedID(key) + 2] = color.R;  // RED
+
+            //Apply and strip Alpha
+            //color = Color.FromArgb(255, Utils.ColorUtils.MultiplyColorByScalar(color, color.A / 255.0D));
+            //if (keyboard != null && keyboard[localKey] != null)
+            //    keyboard[localKey].Color = color;
         }
 
         public bool UpdateDevice(Dictionary<DeviceKeys, Color> keyColors, CancellationToken token, bool forced = false)
         {
+            if (token.IsCancellationRequested) return false;
+            foreach (KeyValuePair<DeviceKeys, Color> key in keyColors)
+            {
+                if (token.IsCancellationRequested) return false;
+                updateClaymoreKeyColor(key.Key, key.Value);
 
+            }
+
+            if (token.IsCancellationRequested) return false;
+            setColorMatrix();
             return true;
         }
 
         public bool UpdateDevice(DeviceColorComposition colorComposition, CancellationToken token, bool forced = false)
         {
-            watch.Restart();
+            if (isInitialized)
+            {
+                watch.Restart();
 
-            bool update_result = UpdateDevice(colorComposition.keyColors, token, forced);
+                bool update_result = UpdateDevice(colorComposition.keyColors, token, forced);
 
-            watch.Stop();
-            lastUpdateTime = watch.ElapsedMilliseconds;
+                watch.Stop();
+                lastUpdateTime = watch.ElapsedMilliseconds;
 
-            return update_result;
+                return update_result;
+            }
+            return false;
+
+        }
+
+        private int KeyToClaymoreLedID(DeviceKeys key)
+        {
+            switch (key)
+            {
+                case DeviceKeys.BACKSLASH:
+                    return 0;
+                case DeviceKeys.TAB:
+                    return 3;
+                case DeviceKeys.CAPS_LOCK:
+                    return 6;
+                case DeviceKeys.LEFT_SHIFT:
+                    return 9;
+                case DeviceKeys.LEFT_CONTROL:
+                    return 12;
+                case DeviceKeys.F1:
+                    return 15;
+                case DeviceKeys.NUM_ONE:
+                    return 18;
+                case DeviceKeys.Q:
+                    return 21;
+                case DeviceKeys.A:
+                    return 24;
+                default:
+                    return 0;
+            }
         }
     }
 }

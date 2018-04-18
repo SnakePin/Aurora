@@ -204,7 +204,11 @@ namespace Aurora.Settings
         [Description("SteelSeries Apex M750")]
         SteelSeries_Apex_M750 = 701,
         [Description("SteelSeries Apex M750 TKL")]
-        SteelSeries_Apex_M750_TKL = 702
+        SteelSeries_Apex_M750_TKL = 702,
+
+        //Asus range is 800-899
+        [Description("Asus Claymore")]
+        Asus_Claymore = 800
     }
 
     public enum PreferredKeyboardLocalization

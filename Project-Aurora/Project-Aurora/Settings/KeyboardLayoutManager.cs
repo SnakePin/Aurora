@@ -652,6 +652,8 @@ namespace Aurora.Settings
                     layoutConfigPath = Path.Combine(layoutsPath, "steelseries_apex_m750.json");
                 else if (keyboard_preference == PreferredKeyboard.SteelSeries_Apex_M750_TKL)
                     layoutConfigPath = Path.Combine(layoutsPath, "steelseries_apex_m750_tkl.json");
+                else if (keyboard_preference == PreferredKeyboard.Asus_Claymore)
+                    layoutConfigPath = Path.Combine(layoutsPath, "asus_claymore.json");
                 else
                 {
                     LoadNone();
