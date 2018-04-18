@@ -538,10 +538,16 @@ namespace Aurora.Settings
                         case PreferredKeyboardLocalization.dvorak_int:
                             culture = "dvorak_int";
                             break;
+                        case PreferredKeyboardLocalization.it:
+                            culture = "it-IT";
+                            break;
                     }
 
                     switch (culture)
                     {
+                        case ("it-IT"):
+                            LoadCulture("it");
+                            break;
                         case ("tr-TR"):
                             LoadCulture("tr");
                             break;

@@ -240,7 +240,9 @@ namespace Aurora.Settings
         [Description("DVORAK (US)")]
         dvorak = 12,
         [Description("DVORAK (INT)")]
-        dvorak_int = 13
+        dvorak_int = 13,
+        [Description("IT")]
+        it = 14
     }
 
     public enum PreferredMouse
