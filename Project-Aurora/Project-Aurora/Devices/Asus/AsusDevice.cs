@@ -22,6 +22,8 @@ namespace Aurora.Devices.Asus
         AuraSdk Aura;
         bool _isKeyboardPresent = false;
         bool _isMousePresent = false;
+        bool _peripherealsInitialized = false;
+        bool _keyboardInitialized = false;
         int _MbControllers = 0;
         int _GPUSControllers = 0;
 
@@ -31,7 +33,8 @@ namespace Aurora.Devices.Asus
         byte[] _mouseColors;
         int[] _mbControllerLedCount;
         int[] _gpuControllerLedCount;
-
+        Dictionary<int, byte[]> _mbColors;
+        Dictionary<int, byte[]> _gpuColors;
 
 
 
@@ -61,7 +64,6 @@ namespace Aurora.Devices.Asus
 
                     if (_isKeyboardPresent)
                     {
-                        Aura.SetKeyboardLedMode(1); // Take control of the keyboard
                         _keyboardLedCount = Aura.GetKeyboardLedCount() *3; // Need to mutiply for RGB
                         _keyboardColors = new byte[_keyboardLedCount];    // check if need to reinitialize when the numpad is disconnected
                         Global.logger.Info("Found Asus Keyboard with: " + _keyboardLedCount + " Leds");
@@ -69,7 +71,6 @@ namespace Aurora.Devices.Asus
 
                     if (_isMousePresent)
                     {
-                        Aura.SetMouseLedMode(1); // Take control of the mouse
                         _mouseLedCount = Aura.GetKeyboardLedCount() * 3; // Need to mutiply for RGB
                         _mouseColors = new byte[_mouseLedCount];
                         Global.logger.Info("Found Asus Mouse with: " + _keyboardLedCount + " Leds");
@@ -81,6 +82,8 @@ namespace Aurora.Devices.Asus
                         for (int i = 0; i < _MbControllers; i++)
                         {
                             _mbControllerLedCount[i] = Aura.GetMBLedCount(i);
+                            _mbColors = new Dictionary<int, byte[]>();
+                            _mbColors.Add(i, new byte[_mbControllerLedCount[i] * 3]);
                             Global.logger.Info("Found Asus Mb controller id: " + i + " with: " + _mbControllerLedCount[i] + " Leds");
                         }
                     }
@@ -91,6 +94,8 @@ namespace Aurora.Devices.Asus
                         for (int i = 0; i < _GPUSControllers; i++)
                         {
                             _gpuControllerLedCount[i] = Aura.GetGPUCtrlLedCount(i);
+                            _gpuColors = new Dictionary<int, byte[]>();
+                            _gpuColors.Add(i, new byte[_gpuControllerLedCount[i] * 3]);
                             Global.logger.Info("Found Asus GPU controller id: " + i + " with: " + _gpuControllerLedCount[i] + " Leds");
                         }
                     }
@@ -152,53 +157,154 @@ namespace Aurora.Devices.Asus
         {
             if (isInitialized)
             {
-                return Aura.isMousePresent();
+                return _isMousePresent || _MbControllers != 0 || _GPUSControllers != 0;
             }
             return false;
         }
 
         public bool Reconnect()
         {
-            Aura.UnloadDll();
-            Aura.LoadDll();
-            return true;
+            throw new NotImplementedException();
         }
 
         public void Reset()
         {
-            Aura.UnloadDll();
-            Aura.LoadDll();
+            throw new NotImplementedException();
         }
 
         public void Shutdown()
         {
             isInitialized = false;
+            dropPeripherealsControl();
+            dropKeyboardControl();
             Aura.UnloadDll();
         }
 
-        private void setColorMatrix()
+        private void ApplyKeybordColor()
         {
             if (isInitialized)
             {
-                lock(action_lock)
-                {
-                    Aura.SetKeyboardLedColor(_keyboardColors);
-                }
+                Aura.SetKeyboardLedColor(_keyboardColors);
 
             }
         }
 
-        private void updateClaymoreKeyColor(DeviceKeys key, Color color)
+        private void SendColorToKeyboard(DeviceKeys key, Color color)
         {
+            if (!_keyboardInitialized)
+            {
+                takeKeyboardControl();
+                _keyboardInitialized = true;
 
+            }
             _keyboardColors[KeyToClaymoreLedID(key)] = color.R; // RED
             _keyboardColors[KeyToClaymoreLedID(key) + 1] = color.G; // GREEN
             _keyboardColors[KeyToClaymoreLedID(key) + 2] = color.B;  // BLU
 
-            //Apply and strip Alpha
-            //color = Color.FromArgb(255, Utils.ColorUtils.MultiplyColorByScalar(color, color.A / 255.0D));
-            //if (keyboard != null && keyboard[localKey] != null)
-            //    keyboard[localKey].Color = color;
+        }
+
+        private void takeKeyboardControl()
+        {
+            if (!_keyboardInitialized)
+            {
+                Aura.SetKeyboardLedMode(1);
+                _keyboardInitialized = true;
+            }
+        }
+
+        private void dropKeyboardControl()
+        {
+            if (_keyboardInitialized)
+            {
+                Aura.SetKeyboardLedMode(0);
+                _keyboardInitialized = false;
+            }
+
+        }
+
+        private void takePeripherealsControl()
+        {
+            if (!_peripherealsInitialized)
+            {
+                for (var i = 0; i < _MbControllers; i++)
+                {
+                    Aura.SetMBLedMode(i, 1);
+                }
+
+                for (var i = 0; i < _GPUSControllers; i++)
+                {
+                    Aura.SetGPUCtrlLedMode(i, 1);
+                }
+
+                if (_isMousePresent)
+                {
+                    Aura.SetMouseLedMode(1);
+                }
+                _peripherealsInitialized = true;
+            }
+
+        }
+
+        private void dropPeripherealsControl()
+        {
+            if (_peripherealsInitialized)
+            {
+                for (var i = 0; i < _MbControllers; i++)
+                {
+                    Aura.SetMBLedMode(i, 0);
+                }
+
+                for (var i = 0; i < _GPUSControllers; i++)
+                {
+                    Aura.SetGPUCtrlLedMode(i, 0);
+                }
+
+                if (_isMousePresent)
+                {
+                    Aura.SetMouseLedMode(0);
+                }
+                _peripherealsInitialized = false;
+            }
+        }
+
+        private void SendColorToPeripheral(Color color)
+        {
+            if (!_peripherealsInitialized)
+            {
+                takePeripherealsControl();
+                _peripherealsInitialized = true;
+            }
+
+            if (_MbControllers != 0)
+            {
+                for (var i = 0; i < _MbControllers; i++)
+                {
+                    int ledCount = _mbControllerLedCount[i];
+                    for (var k = 0; k < ledCount; k = k + 3)
+                    {
+                        _mbColors[i][k] = color.R;
+                        _mbColors[i][k + 1] = color.G;
+                        _mbColors[i][k + 2] = color.B;
+                    }
+                    Aura.SetMBLedColor(i, _mbColors[i]);
+                }
+            }
+
+            if (_GPUSControllers != 0)
+            {
+                for (var i = 0; i < _GPUSControllers; i++)
+                {
+                    int ledCount = _gpuControllerLedCount[i];
+                    for (var k = 0; k < ledCount; k = k + 3)
+                    {
+                        _gpuColors[i][k] = color.R;
+                        _gpuColors[i][k + 1] = color.G;
+                        _gpuColors[i][k + 2] = color.B;
+                    }
+                    Aura.SetGPUCtrlLedColor(i, _gpuColors[i]);
+                }
+            }
+
         }
 
         public bool UpdateDevice(Dictionary<DeviceKeys, Color> keyColors, CancellationToken token, bool forced = false)
@@ -208,12 +314,18 @@ namespace Aurora.Devices.Asus
             {
                 //Global.logger.Info("TASTO: " + key.Key + " val: " + key.Value);
                 if (token.IsCancellationRequested) return false;
-                updateClaymoreKeyColor(key.Key, key.Value);
+                if (key.Key == DeviceKeys.Peripheral_Logo || key.Key == DeviceKeys.Peripheral)
+                {
+                    SendColorToPeripheral(key.Value);
+                } else
+                {
+                    SendColorToKeyboard(key.Key, key.Value);
+                }
 
             }
 
             if (token.IsCancellationRequested) return false;
-            setColorMatrix();
+            ApplyKeybordColor();
             return true;
         }
 

@@ -46,7 +46,6 @@ namespace AsusSdkWrapper {
 			_keyboardLightCtrl = new ClaymoreKeyboardLightControl;
 			DWORD Create = CreateClaymoreKeyboard(_keyboardLightCtrl);
 			if (Create > 0) {
-				SetClaymoreKeyboardMode(*_keyboardLightCtrl, 1);
 				_isKeyboardPresent = true;
 			}
 		} catch (const std::exception&) {
@@ -81,7 +80,6 @@ namespace AsusSdkWrapper {
 			DWORD Create = CreateRogMouse(_mouseLightCtrl);
 
 			if (Create > 0) {
-				SetRogMouseMode(*_mouseLightCtrl, 1);
 				_isMousePresent = true;
 			}
 		} catch (const std::exception&) {
