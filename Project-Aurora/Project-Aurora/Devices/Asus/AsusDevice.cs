@@ -3,43 +3,102 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.Threading;
 using Aurora.Settings;
-using ClaymoreWrapper;
-
+using AsusSdkWrapper;
 
 namespace Aurora.Devices.Asus
 {
     class AsusDevice : Device
     {
 
-        private String devicename = "Claymore";
+        private String devicename = "Asus";
         private bool isInitialized = false;
 
+        private readonly object action_lock = new object();
         private System.Diagnostics.Stopwatch watch = new System.Diagnostics.Stopwatch();
         private Color previous_peripheral_Color = Color.Black;
         private long lastUpdateTime = 0;
 
-        private int ledCount = 0;
-        byte[] colors;
+        // AURA STUFF
+        AuraSdk Aura;
+        bool _isKeyboardPresent = false;
+        bool _isMousePresent = false;
+        int _MbControllers = 0;
+        int _GPUSControllers = 0;
+
+        int _keyboardLedCount = 0;
+        byte[] _keyboardColors;
+        int _mouseLedCount = 0;
+        byte[] _mouseColors;
+        int[] _mbControllerLedCount;
+        int[] _gpuControllerLedCount;
 
 
-        ClaymoreSdk keyboard;
+
+
 
         public bool Initialize()
         {
-
-            keyboard = new ClaymoreSdk();
-            if (!keyboard.Start())
+            if (!isInitialized)
             {
-                Global.logger.Error("Asus: Failed to load DLL");
-                return false;
+                lock(action_lock)
+                {
+                    Aura = new AuraSdk();
+                    if (!Aura.LoadDll())
+                    {
+                        Global.logger.Error("Asus: Failed to load DLL");
+                        return false;
+                    }
+                    _isKeyboardPresent = Aura.isKeyboardPresent();
+                    _isMousePresent = Aura.isMousePresent();
+                    _MbControllers = Aura.getMbAvailableControllers();
+                    _GPUSControllers = Aura.getGPUAvailableControllers();
+
+                    Global.logger.Info("Loaded Aura SDK, found:");
+                    Global.logger.Info("Keyboard: " + _isKeyboardPresent);
+                    Global.logger.Info("Mouse: " + _isMousePresent);
+                    Global.logger.Info("Mb controllers: " + _MbControllers);
+                    Global.logger.Info("GPU controllers: " + _GPUSControllers);
+
+                    if (_isKeyboardPresent)
+                    {
+                        Aura.SetKeyboardLedMode(1); // Take control of the keyboard
+                        _keyboardLedCount = Aura.GetKeyboardLedCount() *3; // Need to mutiply for RGB
+                        _keyboardColors = new byte[_keyboardLedCount];    // check if need to reinitialize when the numpad is disconnected
+                        Global.logger.Info("Found Asus Keyboard with: " + _keyboardLedCount + " Leds");
+                    }
+
+                    if (_isMousePresent)
+                    {
+                        Aura.SetMouseLedMode(1); // Take control of the mouse
+                        _mouseLedCount = Aura.GetKeyboardLedCount() * 3; // Need to mutiply for RGB
+                        _mouseColors = new byte[_mouseLedCount];
+                        Global.logger.Info("Found Asus Mouse with: " + _keyboardLedCount + " Leds");
+                    }
+
+                    if (_MbControllers != 0)
+                    {
+                        _mbControllerLedCount = new int[_MbControllers];
+                        for (int i = 0; i < _MbControllers; i++)
+                        {
+                            _mbControllerLedCount[i] = Aura.GetMBLedCount(i);
+                            Global.logger.Info("Found Asus Mb controller id: " + i + " with: " + _mbControllerLedCount[i] + " Leds");
+                        }
+                    }
+
+                    if (_GPUSControllers != 0)
+                    {
+                        _gpuControllerLedCount = new int[_GPUSControllers];
+                        for (int i = 0; i < _GPUSControllers; i++)
+                        {
+                            _gpuControllerLedCount[i] = Aura.GetGPUCtrlLedCount(i);
+                            Global.logger.Info("Found Asus GPU controller id: " + i + " with: " + _gpuControllerLedCount[i] + " Leds");
+                        }
+                    }
+
+
+                    isInitialized = true;
+                }
             }
-            ledCount = keyboard.GetLedCount() * 3;  // R,G,B
-            colors = new byte[ledCount];    // check if need to reinitialize when the numpad is disconnected
-
-            Global.logger.Info("Got Claymore Keyboard: " + ledCount + " leds");
-            keyboard.SetToSWMode();     // Take control of the keyboard
-
-            isInitialized = true;
             return isInitialized;
         }
 
@@ -72,7 +131,7 @@ namespace Aurora.Devices.Asus
 
         public bool IsConnected()
         {
-            return isInitialized;
+            throw new NotImplementedException();
         }
 
         public bool IsInitialized()
@@ -82,55 +141,59 @@ namespace Aurora.Devices.Asus
 
         public bool IsKeyboardConnected()
         {
-            if (!isInitialized)
+            if (isInitialized)
             {
-                keyboard = new ClaymoreSdk();
-                if (!keyboard.Start())
-                {
-                    Global.logger.Error("Asus: Failed to load DLL");
-                    return false;
-                }
-                keyboard.Stop();
-                return true;
+                return Aura.isKeyboardPresent();
             }
             return false;
         }
 
         public bool IsPeripheralConnected()
         {
-            return true;
+            if (isInitialized)
+            {
+                return Aura.isMousePresent();
+            }
+            return false;
         }
 
         public bool Reconnect()
         {
-            keyboard.Stop();
-            keyboard.Start();
+            Aura.UnloadDll();
+            Aura.LoadDll();
             return true;
         }
 
         public void Reset()
         {
-            keyboard.Stop();
-            keyboard.Start();
+            Aura.UnloadDll();
+            Aura.LoadDll();
         }
 
         public void Shutdown()
         {
             isInitialized = false;
-            keyboard.Stop();
+            Aura.UnloadDll();
         }
 
         private void setColorMatrix()
         {
-            keyboard.setKeyboardColor(colors);
+            if (isInitialized)
+            {
+                lock(action_lock)
+                {
+                    Aura.SetKeyboardLedColor(_keyboardColors);
+                }
+
+            }
         }
 
         private void updateClaymoreKeyColor(DeviceKeys key, Color color)
         {
 
-            colors[KeyToClaymoreLedID(key)] = color.R; // RED
-            colors[KeyToClaymoreLedID(key) + 1] = color.G; // GREEN
-            colors[KeyToClaymoreLedID(key) + 2] = color.B;  // BLU
+            _keyboardColors[KeyToClaymoreLedID(key)] = color.R; // RED
+            _keyboardColors[KeyToClaymoreLedID(key) + 1] = color.G; // GREEN
+            _keyboardColors[KeyToClaymoreLedID(key) + 2] = color.B;  // BLU
 
             //Apply and strip Alpha
             //color = Color.FromArgb(255, Utils.ColorUtils.MultiplyColorByScalar(color, color.A / 255.0D));

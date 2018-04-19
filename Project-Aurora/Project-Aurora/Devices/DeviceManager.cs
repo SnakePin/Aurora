@@ -29,7 +29,13 @@ namespace Aurora.Devices
             Worker.RunWorkerCompleted += (sender, args) =>
             {
                 if (newFrame)
-                    Worker.RunWorkerAsync();
+                    try
+                    {
+                        Worker.RunWorkerAsync();
+                    } catch (Exception e)
+                    {
+                        Global.logger.Info("THREAD CRASHED");
+                    }
             };
             Worker.WorkerSupportsCancellation = true;
         }
@@ -88,7 +94,7 @@ namespace Aurora.Devices
             devices.Add(new DeviceContainer(new Devices.CoolerMaster.CoolerMasterDevice())); // CoolerMaster Device
             devices.Add(new DeviceContainer(new Devices.AtmoOrbDevice.AtmoOrbDevice()));     // AtmoOrb Ambilight Device
             devices.Add(new DeviceContainer(new Devices.SteelSeries.SteelSeriesDevice()));   // SteelSeries Device
-            devices.Add(new DeviceContainer(new Devices.Asus.AsusDevice()));
+            devices.Add(new DeviceContainer(new Devices.Asus.AsusDevice()));                 // Asus Claymore
 
 
             string devices_scripts_path = System.IO.Path.Combine(Global.ExecutingDirectory, "Scripts", "Devices");
@@ -154,7 +160,6 @@ namespace Aurora.Devices
             int devicesToRetryNo = 0;
             foreach (DeviceContainer device in devices)
             {
-                Thread.Sleep(500);
                 if (device.Device.IsInitialized() || Global.Configuration.devices_disabled.Contains(device.Device.GetType()))
                     continue;
 
