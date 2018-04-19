@@ -312,7 +312,6 @@ namespace Aurora.Devices.Asus
             if (token.IsCancellationRequested) return false;
             foreach (KeyValuePair<DeviceKeys, Color> key in keyColors)
             {
-                //Global.logger.Info("TASTO: " + key.Key + " val: " + key.Value);
                 if (token.IsCancellationRequested) return false;
                 if (key.Key == DeviceKeys.Peripheral_Logo || key.Key == DeviceKeys.Peripheral)
                 {
@@ -465,29 +464,29 @@ namespace Aurora.Devices.Asus
                 case DeviceKeys.P:
                     return 246;
                 case DeviceKeys.SEMICOLON:
-                    return 270;
+                    return 249;
                 case DeviceKeys.PERIOD:
                     return 252;
                 case DeviceKeys.FN_Key:
                     return 255;
                 case DeviceKeys.MINUS:
-                    return 276;
-                case DeviceKeys.OPEN_BRACKET:
                     return 267;
+                case DeviceKeys.OPEN_BRACKET:
+                    return 270;
                 case DeviceKeys.APOSTROPHE:
-                    return 249;
+                    return 273;
                 case DeviceKeys.FORWARD_SLASH:
-                    return 297;
+                    return 276;
                 case DeviceKeys.APPLICATION_SELECT:
                     return 279;
                 case DeviceKeys.F9:
                     return 288;
                 case DeviceKeys.EQUALS:
-                    return 294;
-                case DeviceKeys.CLOSE_BRACKET:
                     return 291;
+                case DeviceKeys.CLOSE_BRACKET:
+                    return 294;
                 case DeviceKeys.HASHTAG:
-                    return 273;
+                    return 297;
                 case DeviceKeys.F10:
                     return 312;
                 case DeviceKeys.BACKSPACE:
