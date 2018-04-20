@@ -86,14 +86,14 @@ namespace Aurora.Devices
 
         public DeviceManager()
         {
-            devices.Add(new DeviceContainer(new Devices.Logitech.LogitechDevice()));         // Logitech Device
-            devices.Add(new DeviceContainer(new Devices.Corsair.CorsairDevice()));           // Corsair Device
-            devices.Add(new DeviceContainer(new Devices.Razer.RazerDevice()));               // Razer Device
+            //devices.Add(new DeviceContainer(new Devices.Logitech.LogitechDevice()));         // Logitech Device
+            //devices.Add(new DeviceContainer(new Devices.Corsair.CorsairDevice()));           // Corsair Device
+            //devices.Add(new DeviceContainer(new Devices.Razer.RazerDevice()));               // Razer Device
             //devices.Add(new Devices.Roccat.RoccatDevice());             // Roccat Device
-            devices.Add(new DeviceContainer(new Devices.Clevo.ClevoDevice()));               // Clevo Device
-            devices.Add(new DeviceContainer(new Devices.CoolerMaster.CoolerMasterDevice())); // CoolerMaster Device
-            devices.Add(new DeviceContainer(new Devices.AtmoOrbDevice.AtmoOrbDevice()));     // AtmoOrb Ambilight Device
-            devices.Add(new DeviceContainer(new Devices.SteelSeries.SteelSeriesDevice()));   // SteelSeries Device
+            //devices.Add(new DeviceContainer(new Devices.Clevo.ClevoDevice()));               // Clevo Device
+            //devices.Add(new DeviceContainer(new Devices.CoolerMaster.CoolerMasterDevice())); // CoolerMaster Device
+            //devices.Add(new DeviceContainer(new Devices.AtmoOrbDevice.AtmoOrbDevice()));     // AtmoOrb Ambilight Device
+            //devices.Add(new DeviceContainer(new Devices.SteelSeries.SteelSeriesDevice()));   // SteelSeries Device
             devices.Add(new DeviceContainer(new Devices.Asus.AsusDevice()));                 // Asus Claymore
 
 
@@ -157,31 +157,33 @@ namespace Aurora.Devices
 
         public void Initialize()
         {
-            int devicesToRetryNo = 0;
-            foreach (DeviceContainer device in devices)
-            {
-                if (device.Device.IsInitialized() || Global.Configuration.devices_disabled.Contains(device.Device.GetType()))
-                    continue;
+            Global.logger.Info("initaliizing");
+            Thread.Sleep(1000);
+            //int devicesToRetryNo = 0;
+            //foreach (DeviceContainer device in devices)
+            //{
+            //    if (device.Device.IsInitialized() || Global.Configuration.devices_disabled.Contains(device.Device.GetType()))
+            //        continue;
 
-                if (device.Device.Initialize())
-                    anyInitialized = true;
-                else
-                    devicesToRetryNo++;
+            //    if (device.Device.Initialize())
+            anyInitialized = false;
+            //else
+            //    devicesToRetryNo++;
 
-                Global.logger.Info("Device, " + device.Device.GetDeviceName() + ", was" + (device.Device.IsInitialized() ? "" : " not") + " initialized");
-            }
+            //Global.logger.Info("Device, " + device.Device.GetDeviceName() + ", was" + (device.Device.IsInitialized() ? "" : " not") + " initialized");
+            //}
 
             NewDevicesInitialized?.Invoke(this, new EventArgs());
 
-            if (devicesToRetryNo > 0 && !retryActivated)
-            {
-                retryThread = new Thread(RetryInitialize);
-                retryThread.Start();
+            //if (devicesToRetryNo > 0 && !retryActivated)
+            //{
+            //    retryThread = new Thread(RetryInitialize);
+            //    retryThread.Start();
 
-                retryActivated = true;
-            }
+            //    retryActivated = true;
+            //}
 
-            _InitializeOnceAllowed = true;
+            _InitializeOnceAllowed = false;
         }
 
         private void RetryInitialize()

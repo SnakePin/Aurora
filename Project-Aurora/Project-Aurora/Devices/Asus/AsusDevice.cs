@@ -22,8 +22,12 @@ namespace Aurora.Devices.Asus
         AuraSdk Aura;
         bool _isKeyboardPresent = false;
         bool _isMousePresent = false;
-        bool _peripherealsInitialized = false;
+
+        bool _isMbInitialized = false;
+        bool _isGpuInitialized = false;
+        bool _isMouseInitialized = false;
         bool _keyboardInitialized = false;
+
         int _MbControllers = 0;
         int _GPUSControllers = 0;
 
@@ -41,20 +45,26 @@ namespace Aurora.Devices.Asus
 
         public bool Initialize()
         {
+            Global.logger.Info("called initialize asus");
             if (!isInitialized)
             {
-                lock(action_lock)
+                Global.logger.Info("not itialized ");
+                try
                 {
+                    Global.logger.Info("trying");
                     Aura = new AuraSdk();
+                    Global.logger.Info("new sdk object");
                     if (!Aura.LoadDll())
                     {
                         Global.logger.Error("Asus: Failed to load DLL");
                         return false;
                     }
+                    Global.logger.Info("maybe loaded");
                     _isKeyboardPresent = Aura.isKeyboardPresent();
                     _isMousePresent = Aura.isMousePresent();
                     _MbControllers = Aura.getMbAvailableControllers();
                     _GPUSControllers = Aura.getGPUAvailableControllers();
+
 
                     Global.logger.Info("Loaded Aura SDK, found:");
                     Global.logger.Info("Keyboard: " + _isKeyboardPresent);
@@ -64,20 +74,24 @@ namespace Aurora.Devices.Asus
 
                     if (_isKeyboardPresent)
                     {
-                        _keyboardLedCount = Aura.GetKeyboardLedCount() *3; // Need to mutiply for RGB
+                        Global.logger.Info("Try to load keyboard");
+                        _keyboardLedCount = Aura.GetKeyboardLedCount() * 3; // Need to mutiply for RGB
                         _keyboardColors = new byte[_keyboardLedCount];    // check if need to reinitialize when the numpad is disconnected
+                        takeKeyboardControl();
                         Global.logger.Info("Found Asus Keyboard with: " + _keyboardLedCount + " Leds");
                     }
 
                     if (_isMousePresent)
                     {
-                        _mouseLedCount = Aura.GetKeyboardLedCount() * 3; // Need to mutiply for RGB
+                        Global.logger.Info("Try to load mouse");
+                        _mouseLedCount = Aura.GetMouseLedCount() * 3; // Need to mutiply for RGB
                         _mouseColors = new byte[_mouseLedCount];
                         Global.logger.Info("Found Asus Mouse with: " + _keyboardLedCount + " Leds");
                     }
 
                     if (_MbControllers != 0)
                     {
+                        Global.logger.Info("Try to load Mb");
                         _mbControllerLedCount = new int[_MbControllers];
                         for (int i = 0; i < _MbControllers; i++)
                         {
@@ -90,6 +104,7 @@ namespace Aurora.Devices.Asus
 
                     if (_GPUSControllers != 0)
                     {
+                        Global.logger.Info("Try to load Gpu");
                         _gpuControllerLedCount = new int[_GPUSControllers];
                         for (int i = 0; i < _GPUSControllers; i++)
                         {
@@ -103,6 +118,12 @@ namespace Aurora.Devices.Asus
 
                     isInitialized = true;
                 }
+                catch (Exception e)
+                {
+                    Global.logger.Error("Can not load Asus DLL: " + e.ToString());
+                    return false;
+                }
+
             }
             return isInitialized;
         }
@@ -191,16 +212,12 @@ namespace Aurora.Devices.Asus
 
         private void SendColorToKeyboard(DeviceKeys key, Color color)
         {
-            if (!_keyboardInitialized)
+            if (_keyboardInitialized)
             {
-                takeKeyboardControl();
-                _keyboardInitialized = true;
-
+                _keyboardColors[KeyToClaymoreLedID(key)] = color.R; // RED
+                _keyboardColors[KeyToClaymoreLedID(key) + 1] = color.G; // GREEN
+                _keyboardColors[KeyToClaymoreLedID(key) + 2] = color.B;  // BLU
             }
-            _keyboardColors[KeyToClaymoreLedID(key)] = color.R; // RED
-            _keyboardColors[KeyToClaymoreLedID(key) + 1] = color.G; // GREEN
-            _keyboardColors[KeyToClaymoreLedID(key) + 2] = color.B;  // BLU
-
         }
 
         private void takeKeyboardControl()
@@ -222,61 +239,89 @@ namespace Aurora.Devices.Asus
 
         }
 
-        private void takePeripherealsControl()
+        private void takeMbControl()
         {
-            if (!_peripherealsInitialized)
+            if (!_isMbInitialized)
             {
                 for (var i = 0; i < _MbControllers; i++)
                 {
                     Aura.SetMBLedMode(i, 1);
+                    _isMbInitialized = true;
                 }
-
-                for (var i = 0; i < _GPUSControllers; i++)
-                {
-                    Aura.SetGPUCtrlLedMode(i, 1);
-                }
-
-                if (_isMousePresent)
-                {
-                    Aura.SetMouseLedMode(1);
-                }
-                _peripherealsInitialized = true;
             }
-
         }
 
-        private void dropPeripherealsControl()
+        private void dropMbControl()
         {
-            if (_peripherealsInitialized)
+            if (_isMbInitialized)
             {
                 for (var i = 0; i < _MbControllers; i++)
                 {
                     Aura.SetMBLedMode(i, 0);
+                    _isMbInitialized = false;
                 }
+            }
+        }
 
+
+        private void takeGpuControl()
+        {
+            if (!_isGpuInitialized)
+            {
+                for (var i = 0; i < _GPUSControllers; i++)
+                {
+                    Aura.SetGPUCtrlLedMode(i, 1);
+                    _isGpuInitialized = true;
+                }
+            }
+        }
+
+        private void dropGpuControl()
+        {
+            if (_isGpuInitialized)
+            {
                 for (var i = 0; i < _GPUSControllers; i++)
                 {
                     Aura.SetGPUCtrlLedMode(i, 0);
+                    _isGpuInitialized = false;
                 }
-
-                if (_isMousePresent)
-                {
-                    Aura.SetMouseLedMode(0);
-                }
-                _peripherealsInitialized = false;
             }
+        }
+
+        private void takeMouseControl()
+        {
+            if (_isMousePresent && !_isMouseInitialized)
+            {
+                Aura.SetMouseLedMode(1);
+                _isMouseInitialized = true;
+            }
+        }
+
+        private void dropMouseControl()
+        {
+            if (_isMousePresent && _isMouseInitialized)
+            {
+                Aura.SetMouseLedMode(0);
+                _isMouseInitialized = false;
+            }
+        }
+
+        private void dropPeripherealsControl()
+        {
+            dropMbControl();
+            dropGpuControl();
+            dropMouseControl();
         }
 
         private void SendColorToPeripheral(Color color)
         {
-            if (!_peripherealsInitialized)
-            {
-                takePeripherealsControl();
-                _peripherealsInitialized = true;
-            }
 
             if (_MbControllers != 0)
             {
+                if (!_isMbInitialized)
+                {
+                    takeMbControl();
+                }
                 for (var i = 0; i < _MbControllers; i++)
                 {
                     int ledCount = _mbControllerLedCount[i];
@@ -292,6 +337,10 @@ namespace Aurora.Devices.Asus
 
             if (_GPUSControllers != 0)
             {
+                if (!_isGpuInitialized)
+                {
+                    takeGpuControl();
+                }
                 for (var i = 0; i < _GPUSControllers; i++)
                 {
                     int ledCount = _gpuControllerLedCount[i];
@@ -303,6 +352,21 @@ namespace Aurora.Devices.Asus
                     }
                     Aura.SetGPUCtrlLedColor(i, _gpuColors[i]);
                 }
+            }
+
+            if (_isMousePresent)
+            {
+                if (_isMouseInitialized)
+                {
+                    takeMouseControl();
+                }
+                for (var k = 0; k < _mouseLedCount; k = k + 3)
+                {
+                    _mouseColors[k] = color.R;
+                    _mouseColors[k + 1] = color.G;
+                    _mouseColors[k + 2] = color.B;
+                }
+                Aura.SetMouseLedColor(_mouseColors);
             }
 
         }

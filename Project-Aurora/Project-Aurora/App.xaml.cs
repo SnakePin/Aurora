@@ -292,7 +292,9 @@ namespace Aurora
 
                 Global.logger.Info("Loading Device Manager");
                 Global.dev_manager.RegisterVariables();
+                Global.logger.Info("Registered Variables");
                 Global.dev_manager.Initialize();
+                Global.logger.Info("Iniutialized");
 
                 /*Global.logger.LogLine("Starting GameEventHandler", Logging_Level.Info);
                 Global.geh = new GameEventHandler();
