@@ -54,12 +54,14 @@ namespace AsusSdkWrapper {
 
 		// TRY TO ENUMERATE MB CONTROLLERS
 		DWORD count = 0;
-		try {
-			count = EnumerateMbController(NULL, 0);
-			_mbLightCtrl = new MbLightControl[count];
-			EnumerateMbController(_mbLightCtrl, count);
-		} catch (std::exception e) {
-			std::cout << "[ ERROR ] Aurora-AsusAuraWrapper: can't enumerate Motherboards" << std::endl;
+		if (_enableMbSupport) {
+			try {
+				count = EnumerateMbController(NULL, 0);		// IT often crashes and makes the process hang
+				_mbLightCtrl = new MbLightControl[count];
+				EnumerateMbController(_mbLightCtrl, count);
+			} catch (std::exception e) {
+				std::cout << "[ ERROR ] Aurora-AsusAuraWrapper: can't enumerate Motherboards" << std::endl;
+			}
 		}
 		_mbLedControllers = count;
 

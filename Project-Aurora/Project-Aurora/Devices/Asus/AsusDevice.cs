@@ -20,6 +20,7 @@ namespace Aurora.Devices.Asus
 
         // AURA STUFF
         AuraSdk Aura;
+
         bool _isKeyboardPresent = false;
         bool _isMousePresent = false;
 

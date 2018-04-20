@@ -158,30 +158,29 @@ namespace Aurora.Devices
         public void Initialize()
         {
             Global.logger.Info("initaliizing");
-            Thread.Sleep(1000);
-            //int devicesToRetryNo = 0;
-            //foreach (DeviceContainer device in devices)
-            //{
-            //    if (device.Device.IsInitialized() || Global.Configuration.devices_disabled.Contains(device.Device.GetType()))
-            //        continue;
+            int devicesToRetryNo = 0;
+            foreach (DeviceContainer device in devices)
+            {
+                if (device.Device.IsInitialized() || Global.Configuration.devices_disabled.Contains(device.Device.GetType()))
+                    continue;
 
-            //    if (device.Device.Initialize())
-            anyInitialized = false;
-            //else
-            //    devicesToRetryNo++;
+                if (device.Device.Initialize())
+                    anyInitialized = false;
+                else
+                    devicesToRetryNo++;
 
-            //Global.logger.Info("Device, " + device.Device.GetDeviceName() + ", was" + (device.Device.IsInitialized() ? "" : " not") + " initialized");
-            //}
+                Global.logger.Info("Device, " + device.Device.GetDeviceName() + ", was" + (device.Device.IsInitialized() ? "" : " not") + " initialized");
+            }
 
             NewDevicesInitialized?.Invoke(this, new EventArgs());
 
-            //if (devicesToRetryNo > 0 && !retryActivated)
-            //{
-            //    retryThread = new Thread(RetryInitialize);
-            //    retryThread.Start();
+            if (devicesToRetryNo > 0 && !retryActivated)
+            {
+                retryThread = new Thread(RetryInitialize);
+                retryThread.Start();
 
-            //    retryActivated = true;
-            //}
+                retryActivated = true;
+            }
 
             _InitializeOnceAllowed = false;
         }

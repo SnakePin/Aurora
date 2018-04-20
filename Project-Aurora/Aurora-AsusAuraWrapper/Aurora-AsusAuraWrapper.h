@@ -6,32 +6,30 @@
 
 using namespace System;
 
-HMODULE hLib = nullptr;
-
-EnumerateMbControllerFunc EnumerateMbController;
-SetMbModeFunc SetMbMode;
-SetMbColorFunc SetMbColor;
-GetMbColorFunc GetMbColor;
-GetMbLedCountFunc GetMbLedCount;
-
-EnumerateGPUFunc EnumerateGPU;
-SetGPUModeFunc SetGPUMode;
-SetGPUColorFunc SetGPUColor;
-GetGPULedCountFunc GetGPULedCount;
-
-CreateClaymoreKeyboardFunc CreateClaymoreKeyboard;
-SetClaymoreKeyboardModeFunc SetClaymoreKeyboardMode;
-SetClaymoreKeyboardColorFunc SetClaymoreKeyboardColor;
-GetClaymoreKeyboardLedCountFunc GetClaymoreKeyboardLedCount;
-
-CreateRogMouseFunc CreateRogMouse;
-SetRogMouseModeFunc SetRogMouseMode;
-SetRogMouseColorFunc SetRogMouseColor;
-RogMouseLedCountFunc RogMouseLedCount;
-
-
-
 namespace AsusSdkWrapper {
+
+	HMODULE hLib = nullptr;
+
+	EnumerateMbControllerFunc EnumerateMbController;
+	SetMbModeFunc SetMbMode;
+	SetMbColorFunc SetMbColor;
+	GetMbColorFunc GetMbColor;
+	GetMbLedCountFunc GetMbLedCount;
+
+	EnumerateGPUFunc EnumerateGPU;
+	SetGPUModeFunc SetGPUMode;
+	SetGPUColorFunc SetGPUColor;
+	GetGPULedCountFunc GetGPULedCount;
+
+	CreateClaymoreKeyboardFunc CreateClaymoreKeyboard;
+	SetClaymoreKeyboardModeFunc SetClaymoreKeyboardMode;
+	SetClaymoreKeyboardColorFunc SetClaymoreKeyboardColor;
+	GetClaymoreKeyboardLedCountFunc GetClaymoreKeyboardLedCount;
+
+	CreateRogMouseFunc CreateRogMouse;
+	SetRogMouseModeFunc SetRogMouseMode;
+	SetRogMouseColorFunc SetRogMouseColor;
+	RogMouseLedCountFunc RogMouseLedCount;
 
 	public ref class AuraSdk {
 	public:
@@ -71,6 +69,7 @@ namespace AsusSdkWrapper {
 		// UNLOAD
 		void UnloadDll();
 	private:
+		bool _enableMbSupport = false;  // Actually turned out the Aura Sdks are really broken. this works on a tested Asus z270-e but crash the dll in many other pc.
 		MbLightControl* _mbLightCtrl;
 		GPULightControl* _gpuLightCtrl;
 		ClaymoreKeyboardLightControl* _keyboardLightCtrl;

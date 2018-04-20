@@ -38,7 +38,7 @@
     <ClCompile Include="Aurora-AsusAuraWrapper.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="dllmain.cpp">
+    <ClCompile Include="AssemblyInfo.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
