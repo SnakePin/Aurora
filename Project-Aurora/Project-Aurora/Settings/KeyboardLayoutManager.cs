@@ -545,10 +545,16 @@ namespace Aurora.Settings
                         case PreferredKeyboardLocalization.hu:
                             culture = "hu-HU";
                             break;
+                        case PreferredKeyboardLocalization.it:
+                            culture = "it-IT";
+                            break;
                     }
 
                     switch (culture)
                     {
+                        case ("it-IT"):
+                            LoadCulture("it");
+                            break;
                         case ("tr-TR"):
                             LoadCulture("tr");
                             break;
@@ -677,6 +683,8 @@ namespace Aurora.Settings
                     layoutConfigPath = Path.Combine(layoutsPath, "generic_laptop.json");
                 else if (keyboard_preference == PreferredKeyboard.GenericLaptopNumpad)
                     layoutConfigPath = Path.Combine(layoutsPath, "generic_laptop_numpad.json");
+                else if (keyboard_preference == PreferredKeyboard.Asus_Claymore)
+                    layoutConfigPath = Path.Combine(layoutsPath, "asus_claymore.json");
                 else
                 {
                     LoadNone();

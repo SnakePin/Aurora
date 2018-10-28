@@ -221,8 +221,11 @@ namespace Aurora.Settings
         [Description("Wooting One")]
         Wooting_One = 800,
 
+		//Asus range is 900-999
         [Description("Asus Strix Flare")]
         Asus_Strix_Flare = 900,
+		[Description("Asus Claymore")]
+        Asus_Claymore = 901
     }
 
     public enum PreferredKeyboardLocalization
@@ -256,7 +259,9 @@ namespace Aurora.Settings
         [Description("DVORAK (INT)")]
         dvorak_int = 13,
         [Description("Hungarian")]
-        hu = 14
+        hu = 14,
+        [Description("Italian")]
+        it = 15
     }
 
     public enum PreferredMouse
