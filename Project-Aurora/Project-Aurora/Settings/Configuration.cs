@@ -300,7 +300,12 @@ namespace Aurora.Settings
         [Description("SteelSeries - Rival 300")]
         SteelSeries_Rival_300 = 700,
         [Description("SteelSeries - Rival 300 HP OMEN Edition")]
-        SteelSeries_Rival_300_HP_OMEN_Edition = 701
+        SteelSeries_Rival_300_HP_OMEN_Edition = 701,
+
+
+        //Asus range is 900-999
+        [Description("Asus - Pugio")]
+        Asus_Pugio = 900
     }
 
     public enum KeycapType
