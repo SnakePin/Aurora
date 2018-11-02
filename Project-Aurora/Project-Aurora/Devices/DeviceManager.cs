@@ -104,11 +104,12 @@ namespace Aurora.Devices
             devices.Add(new DeviceContainer(new Devices.CoolerMaster.CoolerMasterDevice())); // CoolerMaster Device
             devices.Add(new DeviceContainer(new Devices.AtmoOrbDevice.AtmoOrbDevice()));     // AtmoOrb Ambilight Device
             devices.Add(new DeviceContainer(new Devices.SteelSeries.SteelSeriesDevice()));   // SteelSeries Device
-            devices.Add(new DeviceContainer(new Devices.SteelSeriesHID.SteelSeriesHIDDevice()));   // SteelSeriesHID Device
+            devices.Add(new DeviceContainer(new Devices.UnifiedHID.UnifiedHIDDevice()));     // UnifiedHID Device
             devices.Add(new DeviceContainer(new Devices.Wooting.WootingDevice()));           // Wooting Device
             devices.Add(new DeviceContainer(new Devices.LightFX.LightFxDevice()));           //Alienware
             devices.Add(new DeviceContainer(new Devices.Dualshock.DualshockDevice()));       //DualShock 4 Device
             devices.Add(new DeviceContainer(new Devices.Asus.AsusDevice()));                 // Asus Claymore
+            
             string devices_scripts_path = System.IO.Path.Combine(Global.ExecutingDirectory, "Scripts", "Devices");
 
             if (Directory.Exists(devices_scripts_path))
