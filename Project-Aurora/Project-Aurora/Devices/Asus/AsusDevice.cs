@@ -2,7 +2,8 @@
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Drawing;
-using System.Threading;
+using System.Runtime.ExceptionServices;
+using System.Threading.Tasks;
 using Aurora.Settings;
 
 using AuraServiceLib;
@@ -12,16 +13,28 @@ namespace Aurora.Devices.Asus
     class AsusDevice : Device
     {
         private const string DeviceName = "Asus";
+        private const string Connected = "Connected";
+        private const string NotConnected = "Not Connected";
 
         private bool _isInitialized = false;
-        private long _lastUpdateTime = 0;
 
         private AuraKeyboardWrapper _keyboard;
-        private AuraDeviceWrapper _gpu;
         private AuraDeviceWrapper _mouse;
-        
-        private System.Diagnostics.Stopwatch _watch = new System.Diagnostics.Stopwatch();
+        private AuraDeviceWrapper _gpu;
 
+        private Task _keyboardUpdatingTask;
+        private Task _mouseUpdatingTask;
+        private Task _gpuUpdatingTask;
+
+        private readonly System.Diagnostics.Stopwatch _keyboardWatch = new System.Diagnostics.Stopwatch();
+        private readonly System.Diagnostics.Stopwatch _mouseWatch = new System.Diagnostics.Stopwatch();
+        private readonly System.Diagnostics.Stopwatch _gpuWatch = new System.Diagnostics.Stopwatch();
+
+        private long _keyboardElapsedTime = 0;
+        private long _mouseElapsedTime = 0;
+        private long _gpuElapsedTime = 0;
+
+        #region Interface
         /// <inheritdoc />
         public VariableRegistry GetRegisteredVariables()
         {
@@ -37,16 +50,28 @@ namespace Aurora.Devices.Asus
         /// <inheritdoc />
         public string GetDeviceDetails()
         {
-            return ($"{DeviceName}: Keyboard Connected, Mouse Connected, GPU Connected");
+            return ($"{DeviceName}: Keyboard {(_keyboard != null ? Connected : NotConnected)}, Mouse {(_mouse != null ? Connected : NotConnected)}, GPU {(_gpu != null ? Connected : NotConnected)}");
         }
 
         /// <inheritdoc />
         public string GetDeviceUpdatePerformance()
         {
-            return (_isInitialized ? _lastUpdateTime + " ms" : "");
+            var result = "";
+            if (!_isInitialized)
+                return result;
+
+            if (IsKeyboardConnected())
+                result += $"Keyboard {_keyboardElapsedTime}ms ";
+            if (IsMouseConnected())
+                result += $"Mouse {_mouseElapsedTime}ms ";
+            if (IsGpuConnected())
+                result += $"GPU {_gpuElapsedTime}ms ";
+
+            return result;
         }
 
         /// <inheritdoc />
+        [HandleProcessCorruptedStateExceptions]
         public bool Initialize()
         {
             if (_isInitialized)
@@ -117,18 +142,29 @@ namespace Aurora.Devices.Asus
         /// <inheritdoc />
         public bool IsPeripheralConnected()
         {
-            return _mouse != null || _gpu != null;
+            return IsMouseConnected() || IsGpuConnected();
+        }
+
+        private bool IsMouseConnected()
+        {
+            return _mouse != null;
+        }
+        
+        private bool IsGpuConnected()
+        {
+            return _gpu != null;
         }
 
         /// <inheritdoc />
+        [HandleProcessCorruptedStateExceptions]
         public bool UpdateDevice(Dictionary<DeviceKeys, Color> keyColors, DoWorkEventArgs e, bool forced = false)
         {
-            if (!_isInitialized || _keyboard == null || e.Cancel)
+            if (!_isInitialized || e.Cancel)
                 return false;
 
-            var usingKeyboard = _keyboard != null && !Global.Configuration.devices_disable_keyboard;
-            var usingMouse = _mouse != null && !Global.Configuration.devices_disable_mouse;
-            var usingGpu = _gpu != null;
+            var usingKeyboard = IsKeyboardConnected() && !Global.Configuration.devices_disable_keyboard;
+            var usingMouse = IsMouseConnected() && !Global.Configuration.devices_disable_mouse;
+            var usingGpu = IsGpuConnected();
             try
             {
                 if (usingKeyboard) SetKeyboardColors(keyColors);
@@ -142,18 +178,43 @@ namespace Aurora.Devices.Asus
             return usingKeyboard || usingMouse;
         }
 
+        /// <inheritdoc />
+        public bool UpdateDevice(DeviceColorComposition colorComposition, DoWorkEventArgs e, bool forced = false)
+        {
+            return UpdateDevice(colorComposition.keyColors, e, forced);
+        }
+        #endregion
+
         private void SetKeyboardColors(Dictionary<DeviceKeys, Color> keyColors)
         {
-            // set to `individual key` mode
-            _keyboard?.Device.SetMode(0);
+            if (_keyboardUpdatingTask == null || _keyboardUpdatingTask.IsCompleted)
+                _keyboardUpdatingTask = Task.Factory.StartNew(() => SetKeyboardColorsTask(keyColors));
+        }
 
-            // set keyboard colors
-            foreach (var keyPair in keyColors)
-                SetKeyboardColor(keyPair.Key, keyPair.Value);
+        private void SetKeyboardColorsTask(Dictionary<DeviceKeys, Color> keyColors)
+        {
+            _keyboardWatch.Restart();
 
-            // send LED data to keyboard
-            if (_isInitialized)
-                _keyboard?.Device.Apply();
+            try
+            {
+                // set to `individual key` mode
+                _keyboard?.Device.SetMode(0);
+
+                // set keyboard colors
+                foreach (var keyPair in keyColors)
+                    SetKeyboardColor(keyPair.Key, keyPair.Value);
+
+                // send LED data to keyboard
+                if (_isInitialized)
+                    _keyboard?.Device.Apply();
+            }
+            catch (Exception)
+            {
+                _keyboard = null;
+            }
+
+            _keyboardWatch.Stop();
+            _keyboardElapsedTime = _keyboardWatch.ElapsedMilliseconds;
         }
 
         private void SetKeyboardColor(DeviceKeys deviceKey, Color color)
@@ -173,14 +234,31 @@ namespace Aurora.Devices.Asus
 
         private void SetMouseColors(Dictionary<DeviceKeys, Color> keyColors)
         {
-            // I'm not sure how to distinguish mice, so if it has 3 LED lights im going to assume it's a Pugio
-            if (_mouse.LightCount == 3)
-                SetPugioMouseColors(keyColors);
-            else
-                SetGenericMouseColors(keyColors);
+            if (_mouseUpdatingTask == null || _mouseUpdatingTask.IsCompleted)
+                _mouseUpdatingTask = Task.Factory.StartNew(() => SetMouseColorsTask(keyColors));
+        }
 
-            if (_isInitialized)
-               _mouse.Device.Apply();
+        private void SetMouseColorsTask(Dictionary<DeviceKeys, Color> keyColors)
+        {
+            _mouseWatch.Restart();
+            try
+            {
+                // I'm not sure how to distinguish mice, so if it has 3 LED lights im going to assume it's a Pugio
+                if (_mouse.LightCount == 3)
+                    SetPugioMouseColors(keyColors);
+                else
+                    SetGenericMouseColors(keyColors);
+
+                if (_isInitialized)
+                    _mouse.Device.Apply();
+            }
+            catch (Exception)
+            {
+                _mouse = null;
+            }
+
+            _mouseWatch.Stop();
+            _mouseElapsedTime = _mouseWatch.ElapsedMilliseconds;
         }
 
         private void SetPugioMouseColors(IReadOnlyDictionary<DeviceKeys, Color> keyColors)
@@ -212,32 +290,36 @@ namespace Aurora.Devices.Asus
 
         private void SetGpuColors(Dictionary<DeviceKeys, Color> keyColors)
         {
-            // just set all LEDs to DeviceKeys.Peripheral
+            if (_gpuUpdatingTask == null || _gpuUpdatingTask.IsCompleted)
+                _gpuUpdatingTask = Task.Factory.StartNew(() => SetGpuColorsTask(keyColors));
+        }
 
-            for (int i = 0; i < _gpu.LightCount; i++)
-                SetGpuSpecificKey(keyColors, DeviceKeys.Peripheral, i);
+        private void SetGpuColorsTask(Dictionary<DeviceKeys, Color> keyColors)
+        {
+            _gpuWatch.Restart();
 
-            if (_isInitialized)
-                _gpu.Device.Apply();
+            try
+            {
+                // just set all LEDs to DeviceKeys.Peripheral
+                for (int i = 0; i < _gpu.LightCount; i++)
+                    SetGpuSpecificKey(keyColors, DeviceKeys.Peripheral_Logo, i);
+
+                if (_isInitialized)
+                    _gpu.Device.Apply();
+            }
+            catch (Exception)
+            {
+                _gpu = null;
+            }
+
+            _gpuWatch.Stop();
+            _gpuElapsedTime = _gpuWatch.ElapsedMilliseconds;
         }
 
         private void SetGpuSpecificKey(IReadOnlyDictionary<DeviceKeys, Color> keyColors, DeviceKeys key, int index)
         {
             if (keyColors.ContainsKey(key))
-                SetRgbLight(_mouse.Device.Lights[index], keyColors[key]);
-        }
-
-        /// <inheritdoc />
-        public bool UpdateDevice(DeviceColorComposition colorComposition, DoWorkEventArgs e, bool forced = false)
-        {
-            _watch.Restart();
-
-            var result = UpdateDevice(colorComposition.keyColors, e, forced);
-
-            _watch.Stop();
-            _lastUpdateTime = _watch.ElapsedMilliseconds;
-
-            return result;
+                SetRgbLight(_gpu.Device.Lights[index], keyColors[key]);
         }
 
         /// <summary>
@@ -264,6 +346,7 @@ namespace Aurora.Devices.Asus
             rgbLight.Blue = color.B;
         }
 
+        #region Wrappers
         /// <summary>
         /// A simple wrapper class to make things a bit neater
         /// </summary>
@@ -586,7 +669,9 @@ namespace Aurora.Devices.Asus
             /// <inheritdoc />
             uint IAuraSyncDevice.Height => ((IAuraSyncDevice) _device).Height;
         }
+        #endregion
 
+        #region Key Dictionaries
         /// <summary>
         /// Determines the ushort ID from a DeviceKeys
         /// </summary>
@@ -852,5 +937,6 @@ namespace Aurora.Devices.Asus
                     return ushort.MaxValue;
             }
         }
+        #endregion
     }
 }
