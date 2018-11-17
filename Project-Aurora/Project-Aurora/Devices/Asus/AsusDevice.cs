@@ -22,11 +22,40 @@ namespace Aurora.Devices.Asus
         private readonly List<AsusGenericHardwareDevice> _asusDevices = new List<AsusGenericHardwareDevice>();
         private AsusKeyboardHardwareDevice _keyboardDevice = null;
 
+        #region Variable Registry
+        
+        private VariableRegistry _variableRegistry;
+        private const string RegistryKeyboard = DeviceName + "_enable_keyboard";
+        private const string RegistryMouse = DeviceName + "_enable_mouse";
+        private const string RegistryGpu = DeviceName + "_enable_gpu";
+        private const string RegistryOther = DeviceName + "_enable_other";
+
+        private const string RegistryKeyboardTitle = "Enable keyboard support";
+        private const string RegistryMouseTitle = "Enable mouse support";
+        private const string RegistryGpuTitle = "Enable GPU support";
+        private const string RegistryOtherTitle = "Enable other peripheral support";
+
+        private bool _registryEnableKeyboard;
+        private bool _registryEnableMouse;
+        private bool _registryEnableGpu;
+        private bool _registryEnableOther;
+
+        #endregion
+
         #region Interface
         /// <inheritdoc />
         public VariableRegistry GetRegisteredVariables()
         {
-            return new VariableRegistry();
+            if (_variableRegistry == null)
+            {
+                _variableRegistry = new VariableRegistry();
+
+                _variableRegistry.Register(RegistryKeyboard, true, RegistryKeyboardTitle);
+                _variableRegistry.Register(RegistryMouse, true, RegistryMouseTitle);
+                _variableRegistry.Register(RegistryGpu, true, RegistryGpuTitle);
+                _variableRegistry.Register(RegistryOther, true, RegistryOtherTitle);
+            }
+            return _variableRegistry;
         }
 
         /// <inheritdoc />
@@ -39,7 +68,7 @@ namespace Aurora.Devices.Asus
         public string GetDeviceDetails()
         {
             return _asusDevices.Count > 0
-                ? $"{DeviceName}: Connected devices {_asusDevices.Select(device => device.Details).Aggregate((d1, d2) => d1 + ", " + d2)}"
+                ? $"{DeviceName}: Connected devices: {_asusDevices.Select(device => device.Details).Aggregate((d1, d2) => d1 + ", " + d2)}"
                 : "{DeviceName}: No Connected devices";
         }
 
@@ -60,8 +89,11 @@ namespace Aurora.Devices.Asus
                 if (_isInitialized)
                     return true;
 
-                Log("Initializing Device");
+                LogInfo("Initializing Device");
+
+                // reset state
                 _asusDevices.Clear();
+                SetLocalRegistryKeys();
                 _keyboardDevice = null;
 
                 try
@@ -71,30 +103,40 @@ namespace Aurora.Devices.Asus
 
                     var allDevices = asusDev.GetAllDevices();
 
-                    Log($"Found {allDevices.Count} device(s)");
+                    LogInfo($"Found {allDevices.Count} device(s)");
                     foreach (IAuraDevice auraDevice in allDevices)
                     {
-                        Log($"Device -> {auraDevice.Name}, has {auraDevice.LightCount} LED lights");
+                        LogInfo($"Device -> {auraDevice.Name}, has {auraDevice.LightCount} LED lights");
 
                         // Due to lack of documentation I will make assumptions as to what these devices are
+                        // Keyboard
                         if (auraDevice is IAuraKeyboard keyboard)
                         {
+                            if (!_registryEnableKeyboard) continue;
                             _keyboardDevice = new AsusKeyboardHardwareDevice(new AuraSdkKeyboardWrapper(keyboard));
                             _asusDevices.Add(_keyboardDevice);
                         }
+                        // Mouse
                         else if (auraDevice.Name.ToLower().Contains("mouse"))
                         {
+                            if (!_registryEnableMouse) continue;
                             _asusDevices.Add(new AsusMouseHardwareDevice(new AuraSdkDeviceWrapper(auraDevice)));
                         }
+                        // Other peripheral devices
                         else if (auraDevice.Name.ToLower().Contains("vga"))
                         {
-                            _asusDevices.Add(new AsusGenericHardwareDevice(new AuraSdkDeviceWrapper(auraDevice), "GPU"));
+                            if (!_registryEnableGpu) continue;
+                            _asusDevices.Add(new AsusGpuHardwareDevice(new AuraSdkDeviceWrapper(auraDevice)));
                         }
-                        else
-                        {
+                        else if (_registryEnableOther)
                             _asusDevices.Add(new AsusGenericHardwareDevice(new AuraSdkDeviceWrapper(auraDevice)));
-                        }
                     }
+
+                    // sort the asus devices, so it looks nice in the UI
+                    _asusDevices.Sort((device1, device2) => 
+                        device1.SortRank == device2.SortRank
+                            ? string.Compare(device1.Name, device2.Name, StringComparison.Ordinal)
+                            : device1.SortRank - device2.SortRank);
                 }
                 catch (Exception)
                 {
@@ -155,6 +197,10 @@ namespace Aurora.Devices.Asus
             if (!_isInitialized || e.Cancel)
                 return false;
 
+            // check to see if any registry variables have changed
+            if (!HandleRegistryChanges())
+                return false;
+
             List<AsusGenericHardwareDevice> removedDevices = null;
             try
             {
@@ -166,7 +212,7 @@ namespace Aurora.Devices.Asus
                     }
                     else
                     {
-                        Log($"{device.Name} disconnected :(");
+                        LogError($"{device.Name} disconnected :(");
                         if (removedDevices == null)
                             removedDevices = new List<AsusGenericHardwareDevice>();
                         removedDevices.Add(device);
@@ -199,6 +245,71 @@ namespace Aurora.Devices.Asus
             return UpdateDevice(colorComposition.keyColors, e, forced);
         }
         #endregion
+
+        private void SetLocalRegistryKeys()
+        {
+            _registryEnableKeyboard = GetRegistryKey(RegistryKeyboard);
+            _registryEnableMouse = GetRegistryKey(RegistryMouse);
+            _registryEnableGpu = GetRegistryKey(RegistryGpu);
+            _registryEnableOther = GetRegistryKey(RegistryOther);
+        }
+
+        /// <summary>
+        /// Handles any registry changes to enable/disable devices
+        /// </summary>
+        /// <returns>True if the stack can continue</returns>
+        private bool HandleRegistryChanges()
+        {
+            var keyboardChanged = _registryEnableKeyboard != GetRegistryKey(RegistryKeyboard) ? GetRegistryKey(RegistryKeyboard) : (bool?) null;
+            var mouseChanged = _registryEnableMouse != GetRegistryKey(RegistryMouse) ? GetRegistryKey(RegistryMouse) : (bool?)null;
+            var gpuChanged = _registryEnableGpu != GetRegistryKey(RegistryGpu) ? GetRegistryKey(RegistryGpu) : (bool?)null;
+            var otherChanged = _registryEnableOther != GetRegistryKey(RegistryOther) ? GetRegistryKey(RegistryOther) : (bool?)null;
+            
+            if (!(keyboardChanged.HasValue || mouseChanged.HasValue || otherChanged.HasValue || gpuChanged.HasValue))
+                return true;
+
+            // if a device is now disconnected simply remove it from the devices list
+            var needToReinitialize = keyboardChanged.GetValueOrDefault(false)
+                                     || mouseChanged.GetValueOrDefault(false)
+                                     || gpuChanged.GetValueOrDefault(false)
+                                     || otherChanged.GetValueOrDefault(false);
+
+            if (needToReinitialize)
+            {
+                Shutdown();
+                Initialize();
+                return false;
+            }
+
+            // otherwise restart the service to obtain the new device
+            if (keyboardChanged.HasValue)
+            {
+                _asusDevices.RemoveAll(device => device.GetType() == typeof(AsusKeyboardHardwareDevice));
+                _registryEnableKeyboard = false;
+            }
+            if (mouseChanged.HasValue)
+            {
+                _asusDevices.RemoveAll(device => device.GetType() == typeof(AsusMouseHardwareDevice));
+                _registryEnableMouse = false;
+            }
+            if (gpuChanged.HasValue)
+            {
+                _asusDevices.RemoveAll(device => device.GetType() == typeof(AsusGpuHardwareDevice));
+                _registryEnableGpu = false;
+            }
+            if (otherChanged.HasValue)
+            {
+                _asusDevices.RemoveAll(device => device.GetType() == typeof(AsusGenericHardwareDevice));
+                _registryEnableOther = false;
+            }
+
+            return true;
+        }
+
+        private static bool GetRegistryKey(string name)
+        {
+            return Global.Configuration.VarRegistry.GetVariable<bool>(name);
+        }
         
         private static void SetDevicesKey(AuraSdkDeviceWrapper device, IReadOnlyDictionary<DeviceKeys, Color> keyColors, DeviceKeys key, int index)
         {
@@ -236,7 +347,11 @@ namespace Aurora.Devices.Asus
             rgbLight.Blue = color.B;
         }
 
-        private static void Log(string logMessage)
+        private static void LogInfo(string logMessage)
+        {
+            Global.logger.Info($"ASUS device: {logMessage}");
+        }
+        private static void LogError(string logMessage)
         {
             Global.logger.Error($"ASUS device: {logMessage}");
         }
@@ -245,6 +360,8 @@ namespace Aurora.Devices.Asus
 
         private class AsusKeyboardHardwareDevice : AsusGenericHardwareDevice
         {
+            public override int SortRank => 1;
+
             private readonly AuraSdkKeyboardWrapper _keyboard;
 
             /// <inheritdoc />
@@ -539,6 +656,8 @@ namespace Aurora.Devices.Asus
 
         private class AsusMouseHardwareDevice : AsusGenericHardwareDevice
         {
+            public override int SortRank => 2;
+
             /// <inheritdoc />
             public AsusMouseHardwareDevice(AuraSdkDeviceWrapper mouseWrapper) : base(mouseWrapper, "Mouse")
             {
@@ -600,6 +719,13 @@ namespace Aurora.Devices.Asus
             }
         }
 
+        private class AsusGpuHardwareDevice : AsusGenericHardwareDevice
+        {
+            public override int SortRank => 3;
+            /// <inheritdoc />
+            public AsusGpuHardwareDevice(AuraSdkDeviceWrapper mouseWrapper) : base(mouseWrapper, "GPU") { }
+        }
+
         private class AsusGenericHardwareDevice
         {
             private Task _task = Task.Factory.StartNew(() => { });
@@ -611,6 +737,7 @@ namespace Aurora.Devices.Asus
             public bool Connected {get; protected set; }
             public string Details => Name;
             public string Status => $"{Name} {_elapsedTime}ms";
+            public virtual int SortRank => int.MaxValue;
 
             protected AsusGenericHardwareDevice(string name)
             {
