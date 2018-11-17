@@ -2,37 +2,25 @@
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Drawing;
+using System.Linq;
 using System.Runtime.ExceptionServices;
 using System.Threading.Tasks;
 using Aurora.Settings;
 
 using AuraServiceLib;
+using Microsoft.Scripting.Utils;
 
 namespace Aurora.Devices.Asus
 {
     class AsusDevice : Device
     {
         private const string DeviceName = "Asus";
-        private const string Connected = "Connected";
-        private const string NotConnected = "Not Connected";
 
         private bool _isInitialized = false;
+        private readonly object _lock = new object();
 
-        private AuraKeyboardWrapper _keyboard;
-        private AuraDeviceWrapper _mouse;
-        private AuraDeviceWrapper _gpu;
-
-        private Task _keyboardUpdatingTask;
-        private Task _mouseUpdatingTask;
-        private Task _gpuUpdatingTask;
-
-        private readonly System.Diagnostics.Stopwatch _keyboardWatch = new System.Diagnostics.Stopwatch();
-        private readonly System.Diagnostics.Stopwatch _mouseWatch = new System.Diagnostics.Stopwatch();
-        private readonly System.Diagnostics.Stopwatch _gpuWatch = new System.Diagnostics.Stopwatch();
-
-        private long _keyboardElapsedTime = 0;
-        private long _mouseElapsedTime = 0;
-        private long _gpuElapsedTime = 0;
+        private readonly List<AsusGenericHardwareDevice> _asusDevices = new List<AsusGenericHardwareDevice>();
+        private AsusKeyboardHardwareDevice _keyboardDevice = null;
 
         #region Interface
         /// <inheritdoc />
@@ -50,57 +38,72 @@ namespace Aurora.Devices.Asus
         /// <inheritdoc />
         public string GetDeviceDetails()
         {
-            return ($"{DeviceName}: Keyboard {(_keyboard != null ? Connected : NotConnected)}, Mouse {(_mouse != null ? Connected : NotConnected)}, GPU {(_gpu != null ? Connected : NotConnected)}");
+            return _asusDevices.Count > 0
+                ? $"{DeviceName}: Connected devices {_asusDevices.Select(device => device.Details).Aggregate((d1, d2) => d1 + ", " + d2)}"
+                : "{DeviceName}: No Connected devices";
         }
 
         /// <inheritdoc />
         public string GetDeviceUpdatePerformance()
         {
-            var result = "";
-            if (!_isInitialized)
-                return result;
-
-            if (IsKeyboardConnected())
-                result += $"Keyboard {_keyboardElapsedTime}ms ";
-            if (IsMouseConnected())
-                result += $"Mouse {_mouseElapsedTime}ms ";
-            if (IsGpuConnected())
-                result += $"GPU {_gpuElapsedTime}ms ";
-
-            return result;
+            return _asusDevices.Count > 0
+                ? _asusDevices.Select(device => device.Status).Aggregate((d1, d2) => d1 + ", " + d2)
+                : string.Empty;
         }
 
         /// <inheritdoc />
         [HandleProcessCorruptedStateExceptions]
         public bool Initialize()
         {
-            if (_isInitialized)
-                return true;
-
-            try
+            lock (_lock)
             {
-                var asusDev = new AuraDevelopement();
-                asusDev.AURARequireToken();
+                if (_isInitialized)
+                    return true;
 
-                var allDevices = asusDev.GetAllDevices();
-                foreach (IAuraDevice auraDevice in allDevices)
+                Log("Initializing Device");
+                _asusDevices.Clear();
+                _keyboardDevice = null;
+
+                try
                 {
-                    // Due to lack of documentation I will make assumptions as to what these devices are
-                    if (auraDevice.Name.ToLower().Contains("vga"))
-                        _gpu = new AuraDeviceWrapper(auraDevice);
-                    else if (auraDevice.Name.ToLower().Contains("mouse"))
-                        _mouse = new AuraDeviceWrapper(auraDevice);
-                    else if (auraDevice is IAuraKeyboard keyboard)
-                        _keyboard = new AuraKeyboardWrapper(keyboard);
-                }
-            }
-            catch (Exception)
-            {
-                // ignored
-            }
+                    var asusDev = new AuraDevelopement();
+                    asusDev.AURARequireToken();
 
-            _isInitialized = (_gpu != null || _mouse != null || _keyboard != null);
-            return _isInitialized;
+                    var allDevices = asusDev.GetAllDevices();
+
+                    Log($"Found {allDevices.Count} device(s)");
+                    foreach (IAuraDevice auraDevice in allDevices)
+                    {
+                        Log($"Device -> {auraDevice.Name}, has {auraDevice.LightCount} LED lights");
+
+                        // Due to lack of documentation I will make assumptions as to what these devices are
+                        if (auraDevice is IAuraKeyboard keyboard)
+                        {
+                            _keyboardDevice = new AsusKeyboardHardwareDevice(new AuraSdkKeyboardWrapper(keyboard));
+                            _asusDevices.Add(_keyboardDevice);
+                        }
+                        else if (auraDevice.Name.ToLower().Contains("mouse"))
+                        {
+                            _asusDevices.Add(new AsusMouseHardwareDevice(new AuraSdkDeviceWrapper(auraDevice)));
+                        }
+                        else if (auraDevice.Name.ToLower().Contains("vga"))
+                        {
+                            _asusDevices.Add(new AsusGenericHardwareDevice(new AuraSdkDeviceWrapper(auraDevice), "GPU"));
+                        }
+                        else
+                        {
+                            _asusDevices.Add(new AsusGenericHardwareDevice(new AuraSdkDeviceWrapper(auraDevice)));
+                        }
+                    }
+                }
+                catch (Exception)
+                {
+                    // ignored
+                }
+
+                _isInitialized = _asusDevices.Count > 0;
+                return _isInitialized;
+            }
         }
 
         /// <inheritdoc />
@@ -136,25 +139,15 @@ namespace Aurora.Devices.Asus
         /// <inheritdoc />
         public bool IsKeyboardConnected()
         {
-            return _keyboard != null;
+            return _keyboardDevice != null;
         }
 
         /// <inheritdoc />
         public bool IsPeripheralConnected()
         {
-            return IsMouseConnected() || IsGpuConnected();
-        }
-
-        private bool IsMouseConnected()
-        {
-            return _mouse != null;
+            return _asusDevices.Count > 0;
         }
         
-        private bool IsGpuConnected()
-        {
-            return _gpu != null;
-        }
-
         /// <inheritdoc />
         [HandleProcessCorruptedStateExceptions]
         public bool UpdateDevice(Dictionary<DeviceKeys, Color> keyColors, DoWorkEventArgs e, bool forced = false)
@@ -162,20 +155,42 @@ namespace Aurora.Devices.Asus
             if (!_isInitialized || e.Cancel)
                 return false;
 
-            var usingKeyboard = IsKeyboardConnected() && !Global.Configuration.devices_disable_keyboard;
-            var usingMouse = IsMouseConnected() && !Global.Configuration.devices_disable_mouse;
-            var usingGpu = IsGpuConnected();
+            List<AsusGenericHardwareDevice> removedDevices = null;
             try
             {
-                if (usingKeyboard) SetKeyboardColors(keyColors);
-                if (usingMouse) SetMouseColors(keyColors);
-                if (usingGpu) SetGpuColors(keyColors);
+                foreach (var device in _asusDevices)
+                {
+                    if (device.Connected)
+                    {
+                        device.SetColors(keyColors);
+                    }
+                    else
+                    {
+                        Log($"{device.Name} disconnected :(");
+                        if (removedDevices == null)
+                            removedDevices = new List<AsusGenericHardwareDevice>();
+                        removedDevices.Add(device);
+                    }
+                }
             }
             catch (Exception)
             {
                 return false;
             }
-            return usingKeyboard || usingMouse;
+
+            // if any devices failed, the remove it from the list
+            if (removedDevices != null)
+            {
+                foreach (var rDevice in removedDevices)
+                {
+                    _asusDevices.Remove(rDevice);
+                    // if this device was a keyboard, then remove the reference as well
+                    if (rDevice is AsusKeyboardHardwareDevice)
+                        _keyboardDevice = null;
+                }
+            }
+
+            return true;
         }
 
         /// <inheritdoc />
@@ -184,142 +199,17 @@ namespace Aurora.Devices.Asus
             return UpdateDevice(colorComposition.keyColors, e, forced);
         }
         #endregion
-
-        private void SetKeyboardColors(Dictionary<DeviceKeys, Color> keyColors)
-        {
-            if (_keyboardUpdatingTask == null || _keyboardUpdatingTask.IsCompleted)
-                _keyboardUpdatingTask = Task.Factory.StartNew(() => SetKeyboardColorsTask(keyColors));
-        }
-
-        private void SetKeyboardColorsTask(Dictionary<DeviceKeys, Color> keyColors)
-        {
-            _keyboardWatch.Restart();
-
-            try
-            {
-                // set to `individual key` mode
-                _keyboard?.Device.SetMode(0);
-
-                // set keyboard colors
-                foreach (var keyPair in keyColors)
-                    SetKeyboardColor(keyPair.Key, keyPair.Value);
-
-                // send LED data to keyboard
-                if (_isInitialized)
-                    _keyboard?.Device.Apply();
-            }
-            catch (Exception)
-            {
-                _keyboard = null;
-            }
-
-            _keyboardWatch.Stop();
-            _keyboardElapsedTime = _keyboardWatch.ElapsedMilliseconds;
-        }
-
-        private void SetKeyboardColor(DeviceKeys deviceKey, Color color)
-        {
-            var keyId = DeviceKeyToAuraKeyboardKeyId(deviceKey);
-            // one quick check
-            if (_keyboard == null)
-                return;
-
-            // if key is invalid
-            if (keyId == ushort.MaxValue || !_keyboard.IdToKey.ContainsKey(keyId))
-                return;
-            
-            var key = _keyboard.IdToKey[keyId];
-            SetRgbLight(key, color);
-        }
-
-        private void SetMouseColors(Dictionary<DeviceKeys, Color> keyColors)
-        {
-            if (_mouseUpdatingTask == null || _mouseUpdatingTask.IsCompleted)
-                _mouseUpdatingTask = Task.Factory.StartNew(() => SetMouseColorsTask(keyColors));
-        }
-
-        private void SetMouseColorsTask(Dictionary<DeviceKeys, Color> keyColors)
-        {
-            _mouseWatch.Restart();
-            try
-            {
-                // I'm not sure how to distinguish mice, so if it has 3 LED lights im going to assume it's a Pugio
-                if (_mouse.LightCount == 3)
-                    SetPugioMouseColors(keyColors);
-                else
-                    SetGenericMouseColors(keyColors);
-
-                if (_isInitialized)
-                    _mouse.Device.Apply();
-            }
-            catch (Exception)
-            {
-                _mouse = null;
-            }
-
-            _mouseWatch.Stop();
-            _mouseElapsedTime = _mouseWatch.ElapsedMilliseconds;
-        }
-
-        private void SetPugioMouseColors(IReadOnlyDictionary<DeviceKeys, Color> keyColors)
-        {
-            // access keys directly since we know what we want
-            SetMouseSpecificKeyIfExist(keyColors, DeviceKeys.Peripheral_Logo);
-            SetMouseSpecificKeyIfExist(keyColors, DeviceKeys.Peripheral_ScrollWheel);
-            SetMouseSpecificKeyIfExist(keyColors, DeviceKeys.Peripheral_FrontLight);
-        }
-
-        private void SetGenericMouseColors(IReadOnlyDictionary<DeviceKeys, Color> keyColors)
-        {
-            // just set all lights to DeviceKeys.Peripheral
-            for (int i = 0; i < _mouse.LightCount; i++)
-                SetMouseSpecificKey(keyColors, DeviceKeys.Peripheral, i);
-        }
-
-        private void SetMouseSpecificKeyIfExist(IReadOnlyDictionary<DeviceKeys, Color> keyColors, DeviceKeys key)
+        
+        private static void SetDevicesKey(AuraSdkDeviceWrapper device, IReadOnlyDictionary<DeviceKeys, Color> keyColors, DeviceKeys key, int index)
         {
             if (keyColors.ContainsKey(key))
-                SetRgbLight(_mouse.Device.Lights[DeviceKeyToAuraMouseKeyId(key)], keyColors[key]);
+                SetRgbLight(device.Device.Lights[index], keyColors[key]);
         }
 
-        private void SetMouseSpecificKey(IReadOnlyDictionary<DeviceKeys, Color> keyColors, DeviceKeys key, int index)
+        private static void SetDevicesKeyIfExist(AuraSdkDeviceWrapper device, Func<DeviceKeys, int> keyMapper, IReadOnlyDictionary<DeviceKeys, Color> keyColors, DeviceKeys key)
         {
             if (keyColors.ContainsKey(key))
-                SetRgbLight(_mouse.Device.Lights[index], keyColors[key]);
-        }
-
-        private void SetGpuColors(Dictionary<DeviceKeys, Color> keyColors)
-        {
-            if (_gpuUpdatingTask == null || _gpuUpdatingTask.IsCompleted)
-                _gpuUpdatingTask = Task.Factory.StartNew(() => SetGpuColorsTask(keyColors));
-        }
-
-        private void SetGpuColorsTask(Dictionary<DeviceKeys, Color> keyColors)
-        {
-            _gpuWatch.Restart();
-
-            try
-            {
-                // just set all LEDs to DeviceKeys.Peripheral
-                for (int i = 0; i < _gpu.LightCount; i++)
-                    SetGpuSpecificKey(keyColors, DeviceKeys.Peripheral_Logo, i);
-
-                if (_isInitialized)
-                    _gpu.Device.Apply();
-            }
-            catch (Exception)
-            {
-                _gpu = null;
-            }
-
-            _gpuWatch.Stop();
-            _gpuElapsedTime = _gpuWatch.ElapsedMilliseconds;
-        }
-
-        private void SetGpuSpecificKey(IReadOnlyDictionary<DeviceKeys, Color> keyColors, DeviceKeys key, int index)
-        {
-            if (keyColors.ContainsKey(key))
-                SetRgbLight(_gpu.Device.Lights[index], keyColors[key]);
+                SetRgbLight(device.Device.Lights[keyMapper(key)], keyColors[key]);
         }
 
         /// <summary>
@@ -346,15 +236,450 @@ namespace Aurora.Devices.Asus
             rgbLight.Blue = color.B;
         }
 
+        private static void Log(string logMessage)
+        {
+            Global.logger.Error($"ASUS device: {logMessage}");
+        }
+
+        #region Devices
+
+        private class AsusKeyboardHardwareDevice : AsusGenericHardwareDevice
+        {
+            private readonly AuraSdkKeyboardWrapper _keyboard;
+
+            /// <inheritdoc />
+            public AsusKeyboardHardwareDevice(AuraSdkKeyboardWrapper keyboard) : base("Keyboard")
+            {
+                _keyboard = keyboard;
+            }
+
+            /// <inheritdoc />
+            protected override void SetColorsAsync(Dictionary<DeviceKeys, Color> keyColors)
+            {
+                try
+                {
+                    // set to `individual key` mode
+                    _keyboard.Device.SetMode(0);
+
+                    // set keyboard colors
+                    foreach (var keyPair in keyColors)
+                        SetKeyboardColor(keyPair.Key, keyPair.Value);
+
+                    // send LED data to keyboard
+                    _keyboard.Device.Apply();
+                }
+                catch
+                {
+                    Connected = false;
+                }
+            }
+
+            private void SetKeyboardColor(DeviceKeys deviceKey, Color color)
+            {
+                var keyId = DeviceKeyToAuraKeyboardKeyId(deviceKey);
+                // one quick check
+                if (_keyboard == null)
+                    return;
+
+                // if key is invalid
+                if (keyId == ushort.MaxValue || !_keyboard.IdToKey.ContainsKey(keyId))
+                    return;
+
+                var key = _keyboard.IdToKey[keyId];
+                SetRgbLight(key, color);
+            }
+
+            /// <summary>
+            /// Determines the ushort ID from a DeviceKeys
+            /// </summary>
+            /// <param name="key">The key to translate</param>
+            /// <returns>the ushort id, or ushort.MaxValue if invalid</returns>
+            private static ushort DeviceKeyToAuraKeyboardKeyId(DeviceKeys key)
+            {
+                switch (key)
+                {
+                    case DeviceKeys.ESC:
+                        return 1;
+                    case DeviceKeys.F1:
+                        return 59;
+                    case DeviceKeys.F2:
+                        return 60;
+                    case DeviceKeys.F3:
+                        return 61;
+                    case DeviceKeys.F4:
+                        return 62;
+                    case DeviceKeys.F5:
+                        return 63;
+                    case DeviceKeys.F6:
+                        return 64;
+                    case DeviceKeys.F7:
+                        return 65;
+                    case DeviceKeys.F8:
+                        return 66;
+                    case DeviceKeys.F9:
+                        return 67;
+                    case DeviceKeys.F10:
+                        return 68;
+                    case DeviceKeys.F11:
+                        return 87;
+                    case DeviceKeys.F12:
+                        return 88;
+                    case DeviceKeys.PRINT_SCREEN:
+                        return 183;
+                    case DeviceKeys.SCROLL_LOCK:
+                        return 70;
+                    case DeviceKeys.PAUSE_BREAK:
+                        return 197;
+                    case DeviceKeys.OEM5:
+                        return 6;
+                    case DeviceKeys.TILDE:
+                        return 41;
+                    case DeviceKeys.ONE:
+                        return 2;
+                    case DeviceKeys.TWO:
+                        return 3;
+                    case DeviceKeys.THREE:
+                        return 4;
+                    case DeviceKeys.FOUR:
+                        return 5;
+                    case DeviceKeys.FIVE:
+                        return 6;
+                    case DeviceKeys.SIX:
+                        return 7;
+                    case DeviceKeys.SEVEN:
+                        return 8;
+                    case DeviceKeys.EIGHT:
+                        return 9;
+                    case DeviceKeys.NINE:
+                        return 10;
+                    case DeviceKeys.ZERO:
+                        return 11;
+                    case DeviceKeys.MINUS:
+                        return 12;
+                    case DeviceKeys.EQUALS:
+                        return 13;
+                    case DeviceKeys.OEM6:
+                        return 7;
+                    case DeviceKeys.BACKSPACE:
+                        return 14;
+                    case DeviceKeys.INSERT:
+                        return 210;
+                    case DeviceKeys.HOME:
+                        return 199;
+                    case DeviceKeys.PAGE_UP:
+                        return 201;
+                    case DeviceKeys.NUM_LOCK:
+                        return 69;
+                    case DeviceKeys.NUM_SLASH:
+                        return 181;
+                    case DeviceKeys.NUM_ASTERISK:
+                        return 55;
+                    case DeviceKeys.NUM_MINUS:
+                        return 74;
+                    case DeviceKeys.TAB:
+                        return 15;
+                    case DeviceKeys.Q:
+                        return 16;
+                    case DeviceKeys.W:
+                        return 17;
+                    case DeviceKeys.E:
+                        return 18;
+                    case DeviceKeys.R:
+                        return 19;
+                    case DeviceKeys.T:
+                        return 20;
+                    case DeviceKeys.Y:
+                        return 21;
+                    case DeviceKeys.U:
+                        return 22;
+                    case DeviceKeys.I:
+                        return 23;
+                    case DeviceKeys.O:
+                        return 24;
+                    case DeviceKeys.P:
+                        return 25;
+                    case DeviceKeys.OEM1:
+                        return 2;
+                    case DeviceKeys.OPEN_BRACKET:
+                        return 26;
+                    case DeviceKeys.OEMPlus:
+                        return 13;
+                    case DeviceKeys.CLOSE_BRACKET:
+                        return 27;
+                    case DeviceKeys.BACKSLASH:
+                        return 43;
+                    case DeviceKeys.DELETE:
+                        return 211;
+                    case DeviceKeys.END:
+                        return 207;
+                    case DeviceKeys.PAGE_DOWN:
+                        return 209;
+                    case DeviceKeys.NUM_SEVEN:
+                        return 71;
+                    case DeviceKeys.NUM_EIGHT:
+                        return 72;
+                    case DeviceKeys.NUM_NINE:
+                        return 73;
+                    case DeviceKeys.NUM_PLUS:
+                        return 78;
+                    case DeviceKeys.CAPS_LOCK:
+                        return 58;
+                    case DeviceKeys.A:
+                        return 30;
+                    case DeviceKeys.S:
+                        return 31;
+                    case DeviceKeys.D:
+                        return 32;
+                    case DeviceKeys.F:
+                        return 33;
+                    case DeviceKeys.G:
+                        return 34;
+                    case DeviceKeys.H:
+                        return 35;
+                    case DeviceKeys.J:
+                        return 36;
+                    case DeviceKeys.K:
+                        return 37;
+                    case DeviceKeys.L:
+                        return 38;
+                    case DeviceKeys.OEMTilde:
+                        return 41;
+                    case DeviceKeys.SEMICOLON:
+                        return 39;
+                    case DeviceKeys.APOSTROPHE:
+                        return 40;
+                    case DeviceKeys.HASHTAG:
+                        return 3;
+                    case DeviceKeys.ENTER:
+                        return 28;
+                    case DeviceKeys.NUM_FOUR:
+                        return 75;
+                    case DeviceKeys.NUM_FIVE:
+                        return 76;
+                    case DeviceKeys.NUM_SIX:
+                        return 77;
+                    case DeviceKeys.LEFT_SHIFT:
+                        return 42;
+                    case DeviceKeys.BACKSLASH_UK:
+                        return 43;
+                    case DeviceKeys.Z:
+                        return 44;
+                    case DeviceKeys.X:
+                        return 45;
+                    case DeviceKeys.C:
+                        return 46;
+                    case DeviceKeys.V:
+                        return 47;
+                    case DeviceKeys.B:
+                        return 48;
+                    case DeviceKeys.N:
+                        return 49;
+                    case DeviceKeys.M:
+                        return 50;
+                    case DeviceKeys.COMMA:
+                        return 51;
+                    case DeviceKeys.PERIOD:
+                        return 52;
+                    case DeviceKeys.FORWARD_SLASH:
+                        return 53;
+                    case DeviceKeys.OEM8:
+                        return 9;
+                    case DeviceKeys.RIGHT_SHIFT:
+                        return 54;
+                    case DeviceKeys.ARROW_UP:
+                        return 200;
+                    case DeviceKeys.NUM_ONE:
+                        return 79;
+                    case DeviceKeys.NUM_TWO:
+                        return 80;
+                    case DeviceKeys.NUM_THREE:
+                        return 81;
+                    case DeviceKeys.NUM_ENTER:
+                        return 156;
+                    case DeviceKeys.LEFT_CONTROL:
+                        return 29;
+                    case DeviceKeys.LEFT_WINDOWS:
+                        return 219;
+                    case DeviceKeys.LEFT_ALT:
+                        return 56;
+                    case DeviceKeys.SPACE:
+                        return 57;
+                    case DeviceKeys.RIGHT_ALT:
+                        return 184;
+                    case DeviceKeys.APPLICATION_SELECT:
+                        return 221;
+                    case DeviceKeys.RIGHT_CONTROL:
+                        return 157;
+                    case DeviceKeys.ARROW_LEFT:
+                        return 203;
+                    case DeviceKeys.ARROW_DOWN:
+                        return 208;
+                    case DeviceKeys.ARROW_RIGHT:
+                        return 205;
+                    case DeviceKeys.NUM_ZERO:
+                        return 82;
+                    case DeviceKeys.NUM_PERIOD:
+                        return 83;
+                    case DeviceKeys.FN_Key:
+                        return 256;
+                    case DeviceKeys.LOGO:
+                        return 257;
+                    case DeviceKeys.ADDITIONALLIGHT1:
+                        // LEFT OF STRIX FLARE KEYBOARD
+                        return 258;
+                    case DeviceKeys.ADDITIONALLIGHT2:
+                        //RIGHT OF STRIX FLARE KEYBOARD
+                        return 259;
+                    default:
+                        return ushort.MaxValue;
+                }
+            }
+
+        }
+
+        private class AsusMouseHardwareDevice : AsusGenericHardwareDevice
+        {
+            /// <inheritdoc />
+            public AsusMouseHardwareDevice(AuraSdkDeviceWrapper mouseWrapper) : base(mouseWrapper, "Mouse")
+            {
+            }
+
+            /// <inheritdoc />
+            protected override void SetColorsAsync(Dictionary<DeviceKeys, Color> keyColors)
+            {
+                try
+                {
+                    // 0 Should be manual mode
+                    _deviceWrapper.Device.SetMode(0);
+
+                    // I'm not sure how to distinguish mice, so if it has 3 LED lights im going to assume it's a Pugio
+                    if (_deviceWrapper.LightCount == 3)
+                        SetPugioMouseColors(keyColors);
+                    else
+                        SetGenericMouseColors(keyColors);
+                    
+                    _deviceWrapper.Device.Apply();
+                }
+                catch
+                {
+                    Connected = false;
+                }
+            }
+
+            private void SetPugioMouseColors(IReadOnlyDictionary<DeviceKeys, Color> keyColors)
+            {
+                // access keys directly since we know what we want
+                SetDevicesKeyIfExist(_deviceWrapper, DeviceKeyToAuraPugioMouseKeyId, keyColors, DeviceKeys.Peripheral_Logo);
+                SetDevicesKeyIfExist(_deviceWrapper, DeviceKeyToAuraPugioMouseKeyId, keyColors, DeviceKeys.Peripheral_ScrollWheel);
+                SetDevicesKeyIfExist(_deviceWrapper, DeviceKeyToAuraPugioMouseKeyId, keyColors, DeviceKeys.Peripheral_FrontLight);
+            }
+
+            private void SetGenericMouseColors(Dictionary<DeviceKeys, Color> keyColors)
+            {
+                base.SetColorsAsync(keyColors);
+            }
+            
+            /// <summary>
+            /// Determines the ushort ID from a DeviceKeys
+            /// </summary>
+            /// <param name="key">The key to translate</param>
+            /// <returns>the index of that mouse LED</returns>
+            private static int DeviceKeyToAuraPugioMouseKeyId(DeviceKeys key)
+            {
+                switch (key)
+                {
+                    case DeviceKeys.Peripheral_Logo:
+                        return 0;
+                    case DeviceKeys.Peripheral_ScrollWheel:
+                        return 1;
+                    case DeviceKeys.Peripheral_FrontLight:
+                        return 2;
+                    default:
+                        return ushort.MaxValue;
+                }
+            }
+        }
+
+        private class AsusGenericHardwareDevice
+        {
+            private Task _task = Task.Factory.StartNew(() => { });
+            protected readonly AuraSdkDeviceWrapper _deviceWrapper;
+            private readonly System.Diagnostics.Stopwatch _watch = new System.Diagnostics.Stopwatch();
+            public readonly string Name;
+            private long _elapsedTime = 0;
+
+            public bool Connected {get; protected set; }
+            public string Details => Name;
+            public string Status => $"{Name} {_elapsedTime}ms";
+
+            protected AsusGenericHardwareDevice(string name)
+            {
+                _deviceWrapper = null;
+                Name = name;
+                Connected = true;
+            }
+
+            public AsusGenericHardwareDevice(AuraSdkDeviceWrapper deviceWrapper, string name = null)
+            {
+                _deviceWrapper = deviceWrapper;
+                Name = name ?? deviceWrapper.Device.Name;
+                Connected = true;
+            }
+
+            /// <summary>
+            /// Set the colors on the peripheral device
+            /// </summary>
+            /// <param name="keyColors">The colors this frame</param>
+            public void SetColors(Dictionary<DeviceKeys, Color> keyColors)
+            {
+                // If a task is running, don't set the colors, wait for the next set
+                if (!_task.IsCompleted)
+                    return;
+
+                _task = Task.Factory.StartNew(() =>
+                {
+                    _watch.Restart();
+                    SetColorsAsync(keyColors);
+                    _watch.Stop();
+                    _elapsedTime = _watch.ElapsedMilliseconds;
+                });
+            }
+
+            /// <summary>
+            /// Set the colors asynchronously, default behaviour is to set all colors DeviceKeys.Peripheral_Logo
+            /// </summary>
+            /// <param name="keyColors">The colors this frame</param>
+            protected virtual void SetColorsAsync(Dictionary<DeviceKeys, Color> keyColors)
+            {
+                try
+                {
+                    // 0 Should be manual mode
+                    _deviceWrapper.Device.SetMode(0);
+
+                    // set all LEDs to DeviceKeys.Peripheral
+                    for (int i = 0; i < _deviceWrapper.LightCount; i++)
+                        SetDevicesKey(_deviceWrapper, keyColors, DeviceKeys.Peripheral_Logo, i);
+
+                    _deviceWrapper.Device.Apply();
+                }
+                catch
+                {
+                    Connected = false;
+                }
+            }
+        }
+
+        #endregion
+
         #region Wrappers
         /// <summary>
         /// A simple wrapper class to make things a bit neater
         /// </summary>
-        private class AuraDeviceWrapper : IAuraDevice
+        private class AuraSdkDeviceWrapper : IAuraDevice
         {
             public IAuraDevice Device { get; private set; }
 
-            public AuraDeviceWrapper(IAuraDevice device)
+            public AuraSdkDeviceWrapper(IAuraDevice device)
             {
                 Device = device;
             }
@@ -460,11 +785,11 @@ namespace Aurora.Devices.Asus
         /// <summary>
         /// A simple wrapper class to make things a bit neater
         /// </summary>
-        private class AuraKeyboardWrapper : IAuraKeyboard
+        private class AuraSdkKeyboardWrapper : IAuraKeyboard
         {
             private readonly IAuraKeyboard _device;
             public IAuraDevice Device => _device;
-            public AuraKeyboardWrapper(IAuraKeyboard device)
+            public AuraSdkKeyboardWrapper(IAuraKeyboard device)
             {
                 _device = device;
                 Initialize();
@@ -668,274 +993,6 @@ namespace Aurora.Devices.Asus
 
             /// <inheritdoc />
             uint IAuraSyncDevice.Height => ((IAuraSyncDevice) _device).Height;
-        }
-        #endregion
-
-        #region Key Dictionaries
-        /// <summary>
-        /// Determines the ushort ID from a DeviceKeys
-        /// </summary>
-        /// <param name="key">The key to translate</param>
-        /// <returns>the ushort id, or ushort.MaxValue if invalid</returns>
-        private static ushort DeviceKeyToAuraKeyboardKeyId(DeviceKeys key)
-        {
-            switch (key)
-            {
-                case DeviceKeys.ESC:
-                    return 1;
-                case DeviceKeys.F1:
-                    return 59;
-                case DeviceKeys.F2:
-                    return 60;
-                case DeviceKeys.F3:
-                    return 61;
-                case DeviceKeys.F4:
-                    return 62;
-                case DeviceKeys.F5:
-                    return 63;
-                case DeviceKeys.F6:
-                    return 64;
-                case DeviceKeys.F7:
-                    return 65;
-                case DeviceKeys.F8:
-                    return 66;
-                case DeviceKeys.F9:
-                    return 67;
-                case DeviceKeys.F10:
-                    return 68;
-                case DeviceKeys.F11:
-                    return 87;
-                case DeviceKeys.F12:
-                    return 88;
-                case DeviceKeys.PRINT_SCREEN:
-                    return 183;
-                case DeviceKeys.SCROLL_LOCK:
-                    return 70;
-                case DeviceKeys.PAUSE_BREAK:
-                    return 197;
-                case DeviceKeys.OEM5:
-                    return 6;
-                case DeviceKeys.TILDE:
-                    return 41;
-                case DeviceKeys.ONE:
-                    return 2;
-                case DeviceKeys.TWO:
-                    return 3;
-                case DeviceKeys.THREE:
-                    return 4;
-                case DeviceKeys.FOUR:
-                    return 5;
-                case DeviceKeys.FIVE:
-                    return 6;
-                case DeviceKeys.SIX:
-                    return 7;
-                case DeviceKeys.SEVEN:
-                    return 8;
-                case DeviceKeys.EIGHT:
-                    return 9;
-                case DeviceKeys.NINE:
-                    return 10;
-                case DeviceKeys.ZERO:
-                    return 11;
-                case DeviceKeys.MINUS:
-                    return 12;
-                case DeviceKeys.EQUALS:
-                    return 13;
-                case DeviceKeys.OEM6:
-                    return 7;
-                case DeviceKeys.BACKSPACE:
-                    return 14;
-                case DeviceKeys.INSERT:
-                    return 210;
-                case DeviceKeys.HOME:
-                    return 199;
-                case DeviceKeys.PAGE_UP:
-                    return 201;
-                case DeviceKeys.NUM_LOCK:
-                    return 69;
-                case DeviceKeys.NUM_SLASH:
-                    return 181;
-                case DeviceKeys.NUM_ASTERISK:
-                    return 55;
-                case DeviceKeys.NUM_MINUS:
-                    return 74;
-                case DeviceKeys.TAB:
-                    return 15;
-                case DeviceKeys.Q:
-                    return 16;
-                case DeviceKeys.W:
-                    return 17;
-                case DeviceKeys.E:
-                    return 18;
-                case DeviceKeys.R:
-                    return 19;
-                case DeviceKeys.T:
-                    return 20;
-                case DeviceKeys.Y:
-                    return 21;
-                case DeviceKeys.U:
-                    return 22;
-                case DeviceKeys.I:
-                    return 23;
-                case DeviceKeys.O:
-                    return 24;
-                case DeviceKeys.P:
-                    return 25;
-                case DeviceKeys.OEM1:
-                    return 2;
-                case DeviceKeys.OPEN_BRACKET:
-                    return 26;
-                case DeviceKeys.OEMPlus:
-                    return 13;
-                case DeviceKeys.CLOSE_BRACKET:
-                    return 27;
-                case DeviceKeys.BACKSLASH:
-                    return 43;
-                case DeviceKeys.DELETE:
-                    return 211;
-                case DeviceKeys.END:
-                    return 207;
-                case DeviceKeys.PAGE_DOWN:
-                    return 209;
-                case DeviceKeys.NUM_SEVEN:
-                    return 71;
-                case DeviceKeys.NUM_EIGHT:
-                    return 72;
-                case DeviceKeys.NUM_NINE:
-                    return 73;
-                case DeviceKeys.NUM_PLUS:
-                    return 78;
-                case DeviceKeys.CAPS_LOCK:
-                    return 58;
-                case DeviceKeys.A:
-                    return 30;
-                case DeviceKeys.S:
-                    return 31;
-                case DeviceKeys.D:
-                    return 32;
-                case DeviceKeys.F:
-                    return 33;
-                case DeviceKeys.G:
-                    return 34;
-                case DeviceKeys.H:
-                    return 35;
-                case DeviceKeys.J:
-                    return 36;
-                case DeviceKeys.K:
-                    return 37;
-                case DeviceKeys.L:
-                    return 38;
-                case DeviceKeys.OEMTilde:
-                    return 41;
-                case DeviceKeys.SEMICOLON:
-                    return 39;
-                case DeviceKeys.APOSTROPHE:
-                    return 40;
-                case DeviceKeys.HASHTAG:
-                    return 3;
-                case DeviceKeys.ENTER:
-                    return 28;
-                case DeviceKeys.NUM_FOUR:
-                    return 75;
-                case DeviceKeys.NUM_FIVE:
-                    return 76;
-                case DeviceKeys.NUM_SIX:
-                    return 77;
-                case DeviceKeys.LEFT_SHIFT:
-                    return 42;
-                case DeviceKeys.BACKSLASH_UK:
-                    return 43;
-                case DeviceKeys.Z:
-                    return 44;
-                case DeviceKeys.X:
-                    return 45;
-                case DeviceKeys.C:
-                    return 46;
-                case DeviceKeys.V:
-                    return 47;
-                case DeviceKeys.B:
-                    return 48;
-                case DeviceKeys.N:
-                    return 49;
-                case DeviceKeys.M:
-                    return 50;
-                case DeviceKeys.COMMA:
-                    return 51;
-                case DeviceKeys.PERIOD:
-                    return 52;
-                case DeviceKeys.FORWARD_SLASH:
-                    return 53;
-                case DeviceKeys.OEM8:
-                    return 9;
-                case DeviceKeys.RIGHT_SHIFT:
-                    return 54;
-                case DeviceKeys.ARROW_UP:
-                    return 200;
-                case DeviceKeys.NUM_ONE:
-                    return 79;
-                case DeviceKeys.NUM_TWO:
-                    return 80;
-                case DeviceKeys.NUM_THREE:
-                    return 81;
-                case DeviceKeys.NUM_ENTER:
-                    return 156;
-                case DeviceKeys.LEFT_CONTROL:
-                    return 29;
-                case DeviceKeys.LEFT_WINDOWS:
-                    return 219;
-                case DeviceKeys.LEFT_ALT:
-                    return 56;
-                case DeviceKeys.SPACE:
-                    return 57;
-                case DeviceKeys.RIGHT_ALT:
-                    return 184;
-                case DeviceKeys.APPLICATION_SELECT:
-                    return 221;
-                case DeviceKeys.RIGHT_CONTROL:
-                    return 157;
-                case DeviceKeys.ARROW_LEFT:
-                    return 203;
-                case DeviceKeys.ARROW_DOWN:
-                    return 208;
-                case DeviceKeys.ARROW_RIGHT:
-                    return 205;
-                case DeviceKeys.NUM_ZERO:
-                    return 82;
-                case DeviceKeys.NUM_PERIOD:
-                    return 83;
-                case DeviceKeys.FN_Key:
-                    return 256;
-                case DeviceKeys.LOGO:
-                    return 257;
-                case DeviceKeys.ADDITIONALLIGHT1:
-                    // LEFT OF STRIX FLARE KEYBOARD
-                    return 258;
-                case DeviceKeys.ADDITIONALLIGHT2:
-                    //RIGHT OF STRIX FLARE KEYBOARD
-                    return 259;
-                default:
-                    return ushort.MaxValue;
-            }
-        }
-
-        /// <summary>
-        /// Determines the ushort ID from a DeviceKeys
-        /// </summary>
-        /// <param name="key">The key to translate</param>
-        /// <returns>the index of that mouse LED</returns>
-        private static int DeviceKeyToAuraMouseKeyId(DeviceKeys key)
-        {
-            switch (key)
-            {
-                case DeviceKeys.Peripheral_Logo:
-                    return 0;
-                case DeviceKeys.Peripheral_ScrollWheel:
-                    return 1;
-                case DeviceKeys.Peripheral_FrontLight:
-                    return 2;
-                default:
-                    return ushort.MaxValue;
-            }
         }
         #endregion
     }
