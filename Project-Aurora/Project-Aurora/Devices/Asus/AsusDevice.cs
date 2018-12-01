@@ -1,14 +1,14 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Drawing;
 using System.Linq;
 using System.Runtime.ExceptionServices;
-using System.Threading.Tasks;
+using System.Threading;
 using Aurora.Settings;
 
 using AuraServiceLib;
-using Microsoft.Scripting.Utils;
 
 namespace Aurora.Devices.Asus
 {
@@ -120,7 +120,12 @@ namespace Aurora.Devices.Asus
                         else if (auraDevice.Name.ToLower().Contains("mouse"))
                         {
                             if (!_registryEnableMouse) continue;
-                            _asusDevices.Add(new AsusMouseHardwareDevice(new AuraSdkDeviceWrapper(auraDevice)));
+
+                            // if pugio is enabled, use the Pugio device instead
+                            if (Global.Configuration.mouse_preference == PreferredMouse.Asus_Pugio)
+                                _asusDevices.Add(new AsusPugioMouseHardwareDevice(new AuraSdkDeviceWrapper(auraDevice)));
+                            else
+                                _asusDevices.Add(new AsusMouseHardwareDevice(new AuraSdkDeviceWrapper(auraDevice)));
                         }
                         // Other peripheral devices
                         else if (auraDevice.Name.ToLower().Contains("vga"))
@@ -138,7 +143,7 @@ namespace Aurora.Devices.Asus
                             ? string.Compare(device1.Name, device2.Name, StringComparison.Ordinal)
                             : device1.SortRank - device2.SortRank);
                 }
-                catch (Exception)
+                catch
                 {
                     // ignored
                 }
@@ -152,6 +157,9 @@ namespace Aurora.Devices.Asus
         public void Shutdown()
         {
             _isInitialized = false;
+            foreach (var asusGenericHardwareDevice in _asusDevices)
+                asusGenericHardwareDevice.CleanUp();
+            _asusDevices.Clear();
         }
 
         /// <inheritdoc />
@@ -358,6 +366,9 @@ namespace Aurora.Devices.Asus
 
         #region Devices
 
+        /// <summary>
+        /// Asus Keyboard, currently modeled on the Asus Strix Flare
+        /// </summary>
         private class AsusKeyboardHardwareDevice : AsusGenericHardwareDevice
         {
             public override int SortRank => 1;
@@ -373,22 +384,17 @@ namespace Aurora.Devices.Asus
             /// <inheritdoc />
             protected override void SetColorsAsync(Dictionary<DeviceKeys, Color> keyColors)
             {
-                try
-                {
-                    // set to `individual key` mode
-                    _keyboard.Device.SetMode(0);
+                if (Global.Configuration.devices_disable_keyboard)
+                    return;
+                // set to `individual key` mode
+                _keyboard.Device.SetMode(0);
 
-                    // set keyboard colors
-                    foreach (var keyPair in keyColors)
-                        SetKeyboardColor(keyPair.Key, keyPair.Value);
+                // set keyboard colors
+                foreach (var keyPair in keyColors)
+                    SetKeyboardColor(keyPair.Key, keyPair.Value);
 
-                    // send LED data to keyboard
-                    _keyboard.Device.Apply();
-                }
-                catch
-                {
-                    Connected = false;
-                }
+                // send LED data to keyboard
+                _keyboard.Device.Apply();
             }
 
             private void SetKeyboardColor(DeviceKeys deviceKey, Color color)
@@ -654,43 +660,55 @@ namespace Aurora.Devices.Asus
 
         }
 
+        /// <summary>
+        /// The Pugio mouse needs to be updated less frequently than other devices
+        /// </summary>
+        private class AsusPugioMouseHardwareDevice : AsusMouseHardwareDevice
+        {
+            // Update the device at 20 updates a second
+            public AsusPugioMouseHardwareDevice(AuraSdkDeviceWrapper mouseWrapper) : base(mouseWrapper, 15)
+            {
+            }
+        }
+        
+        /// <summary>
+        /// Asus mouse, covers three areas of LEDs, the logo, scroll wheel and front light
+        /// </summary>
         private class AsusMouseHardwareDevice : AsusGenericHardwareDevice
         {
             public override int SortRank => 2;
 
-            /// <inheritdoc />
-            public AsusMouseHardwareDevice(AuraSdkDeviceWrapper mouseWrapper) : base(mouseWrapper, "Mouse")
+
+            /// <summary>
+            /// Use for custom mice
+            /// </summary>
+            public AsusMouseHardwareDevice(AuraSdkDeviceWrapper mouseWrapper, float updatesPerSecond = 30) : base(mouseWrapper, "Mouse", updatesPerSecond)
             {
             }
-
+            
             /// <inheritdoc />
             protected override void SetColorsAsync(Dictionary<DeviceKeys, Color> keyColors)
             {
-                try
-                {
-                    // 0 Should be manual mode
-                    _deviceWrapper.Device.SetMode(0);
+                if (Global.Configuration.devices_disable_mouse)
+                    return;
+                // 0 Should be manual mode
+                DeviceWrapper.Device.SetMode(0);
 
-                    // I'm not sure how to distinguish mice, so if it has 3 LED lights im going to assume it's a Pugio
-                    if (_deviceWrapper.LightCount == 3)
-                        SetPugioMouseColors(keyColors);
-                    else
-                        SetGenericMouseColors(keyColors);
-                    
-                    _deviceWrapper.Device.Apply();
-                }
-                catch
-                {
-                    Connected = false;
-                }
+                // I'm not sure how to distinguish mice, so if it has 3 LED lights im going to assume it's a Pugio
+                if (DeviceWrapper.LightCount == 3)
+                    SetPugioMouseColors(keyColors);
+                else
+                    SetGenericMouseColors(keyColors);
+                
+                DeviceWrapper.Device.Apply();
             }
 
             private void SetPugioMouseColors(IReadOnlyDictionary<DeviceKeys, Color> keyColors)
             {
                 // access keys directly since we know what we want
-                SetDevicesKeyIfExist(_deviceWrapper, DeviceKeyToAuraPugioMouseKeyId, keyColors, DeviceKeys.Peripheral_Logo);
-                SetDevicesKeyIfExist(_deviceWrapper, DeviceKeyToAuraPugioMouseKeyId, keyColors, DeviceKeys.Peripheral_ScrollWheel);
-                SetDevicesKeyIfExist(_deviceWrapper, DeviceKeyToAuraPugioMouseKeyId, keyColors, DeviceKeys.Peripheral_FrontLight);
+                SetDevicesKeyIfExist(DeviceWrapper, DeviceKeyToAuraPugioMouseKeyId, keyColors, DeviceKeys.Peripheral_Logo);
+                SetDevicesKeyIfExist(DeviceWrapper, DeviceKeyToAuraPugioMouseKeyId, keyColors, DeviceKeys.Peripheral_ScrollWheel);
+                SetDevicesKeyIfExist(DeviceWrapper, DeviceKeyToAuraPugioMouseKeyId, keyColors, DeviceKeys.Peripheral_FrontLight);
             }
 
             private void SetGenericMouseColors(Dictionary<DeviceKeys, Color> keyColors)
@@ -719,6 +737,9 @@ namespace Aurora.Devices.Asus
             }
         }
 
+        /// <summary>
+        /// An Asus gpu device
+        /// </summary>
         private class AsusGpuHardwareDevice : AsusGenericHardwareDevice
         {
             public override int SortRank => 3;
@@ -726,31 +747,56 @@ namespace Aurora.Devices.Asus
             public AsusGpuHardwareDevice(AuraSdkDeviceWrapper mouseWrapper) : base(mouseWrapper, "GPU") { }
         }
 
+        /// <summary>
+        /// An unspecified Asus RGB device
+        /// </summary>
         private class AsusGenericHardwareDevice
         {
-            private Task _task = Task.Factory.StartNew(() => { });
-            protected readonly AuraSdkDeviceWrapper _deviceWrapper;
-            private readonly System.Diagnostics.Stopwatch _watch = new System.Diagnostics.Stopwatch();
+            /// <summary>
+            /// Name of the device
+            /// </summary>
             public readonly string Name;
-            private long _elapsedTime = 0;
-
-            public bool Connected {get; protected set; }
+            /// <summary>
+            /// Time duration for the last device update
+            /// </summary>
+            public long ElapsedTime => _updateThreadHandler.ElapsedTime;
+            /// <summary>
+            /// Is this device connected? If this is set to false, this object will be disposed
+            /// </summary>
+            public bool Connected => _updateThreadHandler.Connected;
+            /// <summary>
+            /// Details of this device
+            /// </summary>
             public string Details => Name;
-            public string Status => $"{Name} {_elapsedTime}ms";
+            /// <summary>
+            /// A string specifying the elapsed time
+            /// </summary>
+            public string Status => $"{Name} {ElapsedTime}ms";
+            /// <summary>
+            /// How should this item be ordered on the UI?
+            /// </summary>
             public virtual int SortRank => int.MaxValue;
 
-            protected AsusGenericHardwareDevice(string name)
+            // Threading
+            protected readonly AuraSdkDeviceWrapper DeviceWrapper = null;
+            private readonly AsusUpdateThread _updateThreadHandler;
+            private readonly Timer _updateTimer;
+
+            // Timing
+            private readonly float _updatesPerSecond;
+
+            protected AsusGenericHardwareDevice(string name, float updatesPerSecond = 30)
             {
-                _deviceWrapper = null;
                 Name = name;
-                Connected = true;
+                _updatesPerSecond = (1 / updatesPerSecond) * 1000;
+                _updateThreadHandler = new AsusUpdateThread(SetColorsAsync);
+
+                _updateTimer = new Timer(_updateThreadHandler.UpdateDevice, null, 0, (uint)_updatesPerSecond);
             }
 
-            public AsusGenericHardwareDevice(AuraSdkDeviceWrapper deviceWrapper, string name = null)
+            public AsusGenericHardwareDevice(AuraSdkDeviceWrapper deviceWrapper, string name = null, float updatesPerSecond = 30) : this(name ?? deviceWrapper.Device.Name, updatesPerSecond)
             {
-                _deviceWrapper = deviceWrapper;
-                Name = name ?? deviceWrapper.Device.Name;
-                Connected = true;
+                DeviceWrapper = deviceWrapper;
             }
 
             /// <summary>
@@ -759,17 +805,12 @@ namespace Aurora.Devices.Asus
             /// <param name="keyColors">The colors this frame</param>
             public void SetColors(Dictionary<DeviceKeys, Color> keyColors)
             {
-                // If a task is running, don't set the colors, wait for the next set
-                if (!_task.IsCompleted)
-                    return;
+                _updateThreadHandler.SetColors(keyColors);
+            }
 
-                _task = Task.Factory.StartNew(() =>
-                {
-                    _watch.Restart();
-                    SetColorsAsync(keyColors);
-                    _watch.Stop();
-                    _elapsedTime = _watch.ElapsedMilliseconds;
-                });
+            public void CleanUp()
+            {
+                _updateTimer.Dispose();
             }
 
             /// <summary>
@@ -778,20 +819,103 @@ namespace Aurora.Devices.Asus
             /// <param name="keyColors">The colors this frame</param>
             protected virtual void SetColorsAsync(Dictionary<DeviceKeys, Color> keyColors)
             {
-                try
+                // 0 Should be manual mode
+                DeviceWrapper.Device.SetMode(0);
+
+                // set all LEDs to DeviceKeys.Peripheral
+                for (int i = 0; i < DeviceWrapper.LightCount; i++)
+                    SetDevicesKey(DeviceWrapper, keyColors, DeviceKeys.Peripheral_Logo, i);
+
+                DeviceWrapper.Device.Apply();
+            }
+
+            private class AsusUpdateThread
+            {
+                /// <summary>
+                /// Every update this is read to the device
+                /// </summary>
+                private readonly ConcurrentDictionary<DeviceKeys, Color> _keyColors = new ConcurrentDictionary<DeviceKeys, Color>();
+                /// <summary>
+                /// Used to allow _keyColors to be accessed without collisions
+                /// </summary>
+                private readonly object _threadLock = new object();
+                /// <summary>
+                /// A function to update the colors on a device
+                /// </summary>
+                private readonly Action<Dictionary<DeviceKeys, Color>> _setColorsAsync;
+                /// <summary>
+                /// Used to keep track on how long it takes for the device to update
+                /// </summary>
+                private readonly System.Diagnostics.Stopwatch _watch = new System.Diagnostics.Stopwatch();
+
+                /// <summary>
+                /// Time duration for the last device update
+                /// </summary>
+                public long ElapsedTime { get; private set; }
+                /// <summary>
+                /// Whether or not the device is being updated
+                /// </summary>
+                private bool _running = false;
+                /// <summary>
+                /// Is this device connected? If this is set to false, this object and thread will be disposed of 
+                /// </summary>
+                public bool Connected { get; private set; } = true;
+
+                public AsusUpdateThread(Action<Dictionary<DeviceKeys, Color>> setColorsAsync)
                 {
-                    // 0 Should be manual mode
-                    _deviceWrapper.Device.SetMode(0);
-
-                    // set all LEDs to DeviceKeys.Peripheral
-                    for (int i = 0; i < _deviceWrapper.LightCount; i++)
-                        SetDevicesKey(_deviceWrapper, keyColors, DeviceKeys.Peripheral_Logo, i);
-
-                    _deviceWrapper.Device.Apply();
+                    _setColorsAsync = setColorsAsync;
                 }
-                catch
+
+                /// <summary>
+                /// Set the next set of colors for the device
+                /// </summary>
+                /// <param name="colors">The set of colors</param>
+                public void SetColors(Dictionary<DeviceKeys, Color> colors)
                 {
-                    Connected = false;
+                    foreach (var keyValuePair in colors)
+                    {
+                        _keyColors.AddOrUpdate(keyValuePair.Key, keyValuePair.Value,
+                            ((keys, color) => keyValuePair.Value));
+                    }
+                }
+
+                /// <summary>
+                /// This is called upon every update tick, to update the device with whatever colors are set in _keyColors
+                /// </summary>
+                /// <param name="_">Ignored state object from the Thread.Timer class</param>
+                [HandleProcessCorruptedStateExceptions]
+                public void UpdateDevice(object _)
+                {
+                    // Don't update colors if we're currently updating or the device is not connected
+                    if (_running || !Connected)
+                        return;
+
+                    _running = true;
+                    UpdateColors();
+                    _running = false;
+                }
+
+                private void UpdateColors()
+                {
+                    if (_keyColors == null)
+                        return;
+
+                    // cast the dictionary
+                    var keyColors = new Dictionary<DeviceKeys, Color>(_keyColors);
+
+                    // attempt to update the device, if it fails, change the connected state
+                    _watch.Restart();
+                    try
+                    {
+                        _setColorsAsync.Invoke(keyColors);
+                    }
+                    catch
+                    {
+                        Connected = false;
+                    }
+                    _watch.Stop();
+
+                    ElapsedTime = _watch.ElapsedMilliseconds;
                 }
             }
         }
