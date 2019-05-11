@@ -90,7 +90,7 @@ namespace Aurora.Devices.RoccatVulcan
                         rv_wait_for_ctrl_device();
 
 
-
+                            isInitialized = true;
                         }
                     }
                     catch (Exception exc)
