@@ -258,9 +258,33 @@ namespace Aurora.Devices.RoccatVulcan
             { DeviceKeys.LEFT_SHIFT, 3 },
             { DeviceKeys.LEFT_CONTROL, 4 },
 
-            { DeviceKeys.Q, 5 },
-            { DeviceKeys.A, 6 },
-            { DeviceKeys.Z, 7 },
+            { DeviceKeys.ONE, 7 },
+            { DeviceKeys.Q, 8 },
+            { DeviceKeys.A, 9 },
+
+            { DeviceKeys.TWO, 13 },
+            { DeviceKeys.W, 14 },
+            { DeviceKeys.S, 15 },
+            { DeviceKeys.Z, 16 },
+
+            { DeviceKeys.THREE, 19 },
+            { DeviceKeys.E, 20 },
+            { DeviceKeys.D, 21 },
+            { DeviceKeys.X, 22 },
+
+            { DeviceKeys.FOUR, 25 },
+            { DeviceKeys.R, 26 },
+            { DeviceKeys.F, 27 },
+            { DeviceKeys.C, 28 },
+
+            { DeviceKeys.FIVE, 30 },
+            { DeviceKeys.T, 31 },
+            { DeviceKeys.G, 32 },
+            { DeviceKeys.V, 33 },
+            { DeviceKeys.SIX, 34 },
+            { DeviceKeys.Y, 35 },
+            { DeviceKeys.H, 36 },
+            { DeviceKeys.B, 37 },
         };
 
         public static int DeviceKeyToRoccatVulcanIndex(DeviceKeys key)
