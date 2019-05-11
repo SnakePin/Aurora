@@ -347,6 +347,10 @@ namespace Aurora.Devices.RoccatVulcan
 
             { DeviceKeys.P, 67 },
 
+            { DeviceKeys.COMMA, 63 },
+
+            { DeviceKeys.SEMICOLON, 68 },
+
             { DeviceKeys.PERIOD, 69 },
 
             { DeviceKeys.RIGHT_ALT, 70 },
@@ -358,7 +362,8 @@ namespace Aurora.Devices.RoccatVulcan
             //{ DeviceKeys.QUOTE, 74 },
 
             { DeviceKeys.FORWARD_SLASH, 75 },
-            
+
+            { DeviceKeys.FN_Key, 76 },
 
             { DeviceKeys.EQUALS, 79 },
 
@@ -368,7 +373,7 @@ namespace Aurora.Devices.RoccatVulcan
 
             { DeviceKeys.RIGHT_SHIFT, 82 },
 
-            //{ DeviceKeys.APPLICATION_SELECT, 83 },
+            { DeviceKeys.APPLICATION_SELECT, 83 },
 
             { DeviceKeys.BACKSPACE, 87 },
 
