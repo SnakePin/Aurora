@@ -239,14 +239,42 @@ namespace Aurora.Devices.RoccatVulcan
             { DeviceKeys.LEFT_CONTROL, 5 },
 
             { DeviceKeys.ONE, 6 },
+            { DeviceKeys.TWO, 12 },
+            { DeviceKeys.THREE, 18 },
+            { DeviceKeys.FOUR, 24 },
+            { DeviceKeys.FIVE, 29 },
+            { DeviceKeys.SIX, 33 },
+            { DeviceKeys.SEVEN, 49 },
+            { DeviceKeys.EIGHT, 54 },
+            { DeviceKeys.NINE, 60 },
+            { DeviceKeys.ZERO, 66 },
+
+            { DeviceKeys.F1, 11 },
+            { DeviceKeys.F2, 17 },
+            { DeviceKeys.F3, 23 },
+            { DeviceKeys.F4, 28 },
+            { DeviceKeys.F5, 48 },
+            { DeviceKeys.F6, 53 },
+            { DeviceKeys.F7, 59 },
+
+            //{ DeviceKeys.F7, 63 },
+
+            { DeviceKeys.F8, 65 },
+            { DeviceKeys.F9, 78 },
+            { DeviceKeys.F10, 84 },
+
+            { DeviceKeys.F11, 85 },
+
+            { DeviceKeys.F12, 86 },
+
             { DeviceKeys.Q, 7 },
             { DeviceKeys.A, 8 },
 
             //{ DeviceKeys.ARROW_DOWN, 9 },
 
-            { DeviceKeys.F1, 11 },
+            
 
-            { DeviceKeys.TWO, 12 },
+            
 
             { DeviceKeys.W, 13 },
 
@@ -255,10 +283,9 @@ namespace Aurora.Devices.RoccatVulcan
             { DeviceKeys.Z, 15 },
 
             { DeviceKeys.LEFT_ALT, 16 },
+            
 
-            { DeviceKeys.F2, 17 },
-
-            { DeviceKeys.THREE, 18 },
+            
 
 
             { DeviceKeys.E, 19 },
@@ -270,26 +297,23 @@ namespace Aurora.Devices.RoccatVulcan
 
             //{ DeviceKeys.ARROW_DOWN, 22 },
 
+            
 
-            { DeviceKeys.F3, 23 },
-
-            { DeviceKeys.FOUR, 24 },
+            
 
             { DeviceKeys.R, 25 },
 
-            { DeviceKeys.C, 27 },
+            //{ DeviceKeys.C, 27 },
+            
 
-            { DeviceKeys.F4, 28 },
-
-            { DeviceKeys.FIVE, 29 },
+            
 
             { DeviceKeys.T, 30 },
 
             { DeviceKeys.G, 31 },
 
             { DeviceKeys.V, 32 },
-
-            { DeviceKeys.SIX, 33 },
+           
 
             { DeviceKeys.Y, 34 },
 
@@ -300,40 +324,30 @@ namespace Aurora.Devices.RoccatVulcan
             { DeviceKeys.SPACE, 37 },
 
             //{ DeviceKeys.ARROW_DOWN, 38 },
-
-            { DeviceKeys.F5, 48 },
-
-            { DeviceKeys.SEVEN, 49  },
+            
+             
 
             { DeviceKeys.U, 50 },
 
             { DeviceKeys.J, 51 },
 
             { DeviceKeys.N, 52 },
-
-            { DeviceKeys.F6, 53  },
-
-            { DeviceKeys.EIGHT, 54 },
+            
+            
 
             { DeviceKeys.I, 55 },
 
             { DeviceKeys.K, 56 },
 
             { DeviceKeys.M, 57 },
-
-            { DeviceKeys.F7, 59 },
-
-            { DeviceKeys.NINE, 60 },
+            
+            
 
             { DeviceKeys.O, 61 },
 
             { DeviceKeys.L, 62 },
 
-            { DeviceKeys.F7, 63 },
-
-            { DeviceKeys.F8, 65 },
-
-            { DeviceKeys.ZERO, 66 },
+            
 
             { DeviceKeys.P, 67 },
 
@@ -348,8 +362,7 @@ namespace Aurora.Devices.RoccatVulcan
             //{ DeviceKeys.QUOTE, 74 },
 
             //{ DeviceKeys.FORWARD_SLASH, 75 },
-
-            { DeviceKeys.F9, 78 },
+            
 
             { DeviceKeys.OEMPlus, 79 },
 
@@ -360,12 +373,6 @@ namespace Aurora.Devices.RoccatVulcan
             { DeviceKeys.RIGHT_SHIFT, 82 },
 
             //{ DeviceKeys.APPLICATION_SELECT, 83 },
-
-            { DeviceKeys.F10, 84 },
-
-            { DeviceKeys.F11, 85 },
-
-            { DeviceKeys.F12, 86 },
 
             { DeviceKeys.BACKSPACE, 87 },
 
@@ -427,7 +434,7 @@ namespace Aurora.Devices.RoccatVulcan
 
             { DeviceKeys.NUM_PLUS, 130 },
 
-            { DeviceKeys.NUM_ENTER, 131 },
+            { DeviceKeys.NUM_ENTER, 131 }
         };
 
         public static int DeviceKeyToRoccatVulcanIndex(DeviceKeys key)
