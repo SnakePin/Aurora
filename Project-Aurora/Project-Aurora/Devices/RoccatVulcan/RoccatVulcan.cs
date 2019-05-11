@@ -359,7 +359,7 @@ namespace Aurora.Devices.RoccatVulcan
 
             { DeviceKeys.OPEN_BRACKET, 73 },
 
-            //{ DeviceKeys.QUOTE, 74 },
+            { DeviceKeys.APOSTROPHE, 74 },
 
             { DeviceKeys.FORWARD_SLASH, 75 },
 
@@ -433,7 +433,7 @@ namespace Aurora.Devices.RoccatVulcan
 
             { DeviceKeys.NUM_THREE, 127 },
 
-            //{ DeviceKeys.numdecimal, 128 },
+            { DeviceKeys.NUM_PERIOD, 128 },
 
             { DeviceKeys.NUM_MINUS, 129 },
 
