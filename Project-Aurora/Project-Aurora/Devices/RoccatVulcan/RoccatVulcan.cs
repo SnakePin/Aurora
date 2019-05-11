@@ -69,25 +69,25 @@ namespace Aurora.Devices.RoccatVulcan
 
 
                             bool success =
-                        rv_get_ctrl_report(0x0f) &&
-                        rv_set_ctrl_report(0x15) &&
-                        rv_wait_for_ctrl_device() &&
-                        rv_set_ctrl_report(0x05) &&
-                        rv_wait_for_ctrl_device() &&
-                        rv_set_ctrl_report(0x07) &&
-                        rv_wait_for_ctrl_device() &&
-                        rv_set_ctrl_report(0x0a) &&
-                        rv_wait_for_ctrl_device() &&
-                        rv_set_ctrl_report(0x0b) &&
-                        rv_wait_for_ctrl_device() &&
-                        rv_set_ctrl_report(0x06) &&
-                        rv_wait_for_ctrl_device() &&
-                        rv_set_ctrl_report(0x09) &&
-                        rv_wait_for_ctrl_device() &&
-                        rv_set_ctrl_report(0x0d) &&
-                        rv_wait_for_ctrl_device() &&
-                        rv_set_ctrl_report(0x13) &&
-                        rv_wait_for_ctrl_device();
+                                rv_get_ctrl_report(0x0f) &&
+                                rv_set_ctrl_report(0x15) &&
+                                rv_wait_for_ctrl_device() &&
+                                rv_set_ctrl_report(0x05) &&
+                                rv_wait_for_ctrl_device() &&
+                                rv_set_ctrl_report(0x07) &&
+                                rv_wait_for_ctrl_device() &&
+                                rv_set_ctrl_report(0x0a) &&
+                                rv_wait_for_ctrl_device() &&
+                                rv_set_ctrl_report(0x0b) &&
+                                rv_wait_for_ctrl_device() &&
+                                rv_set_ctrl_report(0x06) &&
+                                rv_wait_for_ctrl_device() &&
+                                rv_set_ctrl_report(0x09) &&
+                                rv_wait_for_ctrl_device() &&
+                                rv_set_ctrl_report(0x0d) &&
+                                rv_wait_for_ctrl_device() &&
+                                rv_set_ctrl_report(0x13) &&
+                                rv_wait_for_ctrl_device();
 
 
                             isInitialized = true;
@@ -102,15 +102,10 @@ namespace Aurora.Devices.RoccatVulcan
                 }
 
                 if (!isInitialized)
-                    Global.logger.Info("No Roccat Vuşcan devices successfully Initialized!");
+                    Global.logger.Info("No Roccat Vulcan devices successfully Initialized!");
 
                 return isInitialized;
             }
-        }
-
-        ~RoccatVulcan()
-        {
-            this.Shutdown();
         }
 
         public void Shutdown()
@@ -241,14 +236,7 @@ namespace Aurora.Devices.RoccatVulcan
 
         public VariableRegistry GetRegisteredVariables()
         {
-            if (default_registry == null)
-            {
-                default_registry = new VariableRegistry();
-                default_registry.Register($"{devicename}_scalar_r", 100, "Red Scalar", 100, 0);
-                default_registry.Register($"{devicename}_scalar_g", 100, "Green Scalar", 100, 0);
-                default_registry.Register($"{devicename}_scalar_b", 100, "Blue Scalar", 100, 0, "In percent");
-            }
-            return default_registry;
+            return new VariableRegistry();
         }
 
         public static Dictionary<DeviceKeys, int> KeyMap = new Dictionary<DeviceKeys, int> {
@@ -310,7 +298,7 @@ namespace Aurora.Devices.RoccatVulcan
             { DeviceKeys.ZERO, 67  },
             { DeviceKeys.P, 68 },
             { DeviceKeys.SEMICOLON, 69 },
-            { DeviceKeys.BACKSLASH, 70 },
+            { DeviceKeys.BACKSLASH, 70 }
         };
 
         public static int DeviceKeyToRoccatVulcanIndex(DeviceKeys key)
