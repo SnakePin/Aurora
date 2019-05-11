@@ -361,9 +361,73 @@ namespace Aurora.Devices.RoccatVulcan
 
             //{ DeviceKeys.APPLICATION_SELECT, 83 },
 
-            { DeviceKeys.PERIOD, 69 },
+            { DeviceKeys.F10, 84 },
 
-            { DeviceKeys.PERIOD, 69 },
+            { DeviceKeys.F11, 85 },
+
+            { DeviceKeys.F12, 86 },
+
+            { DeviceKeys.BACKSPACE, 87 },
+
+            { DeviceKeys.ENTER, 88 },
+
+            { DeviceKeys.RIGHT_CONTROL, 89 },
+
+            { DeviceKeys.PRINT_SCREEN, 90 },
+
+            { DeviceKeys.INSERT, 100 },
+
+            { DeviceKeys.DELETE, 101 },
+
+            //{ DeviceKeys.ARROW_LEFT, 102 },
+
+            { DeviceKeys.SCROLL_LOCK, 103 },
+
+            { DeviceKeys.HOME, 104 },
+
+            { DeviceKeys.END, 105 },
+
+            //{ DeviceKeys.ARROW_UP, 106 },
+
+            //{ DeviceKeys.ARROW_DOWN, 107 },
+
+            { DeviceKeys.PAGE_DOWN, 110 },
+
+            //{ DeviceKeys.ARROW_RIGHT, 111 },
+
+            { DeviceKeys.NUM_LOCK, 113 },
+
+            { DeviceKeys.NUM_SEVEN, 114 },
+
+            { DeviceKeys.NUM_FOUR, 115 },
+
+            { DeviceKeys.NUM_ONE, 116 },
+
+            { DeviceKeys.NUM_ZERO, 117 },
+
+            { DeviceKeys.NUM_SLASH, 119 },
+
+            { DeviceKeys.NUM_EIGHT, 120 },
+
+            { DeviceKeys.NUM_FIVE, 121 },
+
+            { DeviceKeys.NUM_TWO, 122 },
+
+            { DeviceKeys.NUM_ASTERISK, 124 },
+
+            { DeviceKeys.NUM_NINE, 125 },
+
+            { DeviceKeys.NUM_SIX, 126 },
+
+            { DeviceKeys.NUM_THREE, 127 },
+
+            //{ DeviceKeys.num_decimal, 128 },
+
+            { DeviceKeys.NUM_MINUS, 129 },
+
+            { DeviceKeys.NUM_PLUS, 130 },
+
+            { DeviceKeys.NUM_ENTER, 131 },
         };
 
         public static int DeviceKeyToRoccatVulcanIndex(DeviceKeys key)
