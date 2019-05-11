@@ -379,7 +379,7 @@ namespace Aurora.Devices.RoccatVulcan
 
             { DeviceKeys.DELETE, 101 },
 
-            //{ DeviceKeys.ARROW_LEFT, 102 },
+            { DeviceKeys.ARROW_LEFT, 102 },
 
             { DeviceKeys.SCROLL_LOCK, 103 },
 
@@ -387,13 +387,13 @@ namespace Aurora.Devices.RoccatVulcan
 
             { DeviceKeys.END, 105 },
 
-            //{ DeviceKeys.ARROW_UP, 106 },
+            { DeviceKeys.ARROW_UP, 106 },
 
-            //{ DeviceKeys.ARROW_DOWN, 107 },
+            { DeviceKeys.ARROW_DOWN, 107 },
 
             { DeviceKeys.PAGE_DOWN, 110 },
 
-            //{ DeviceKeys.ARROW_RIGHT, 111 },
+            { DeviceKeys.ARROW_RIGHT, 111 },
 
             { DeviceKeys.NUM_LOCK, 113 },
 
