@@ -236,48 +236,91 @@ namespace Aurora.Devices.RoccatVulcan
             { DeviceKeys.TILDE, 1 },
             { DeviceKeys.TAB, 2 },
             { DeviceKeys.LEFT_SHIFT, 3 },
-            { DeviceKeys.LEFT_CONTROL, 4 },
+            { DeviceKeys.LEFT_CONTROL, 5 },
 
-            { DeviceKeys.ONE, 7 },
-            { DeviceKeys.Q, 8 },
-            { DeviceKeys.A, 9 },
+            { DeviceKeys.ONE, 6 },
+            { DeviceKeys.Q, 7 },
+            { DeviceKeys.A, 8 },
 
-            { DeviceKeys.TWO, 13 },
-            { DeviceKeys.W, 14 },
-            { DeviceKeys.S, 15 },
-            { DeviceKeys.Z, 16 },
+            //{ DeviceKeys.ARROW_DOWN, 9 },
 
-            { DeviceKeys.THREE, 19 },
-            { DeviceKeys.E, 20 },
-            { DeviceKeys.D, 21 },
-            { DeviceKeys.X, 22 },
+            { DeviceKeys.F1, 11 },
 
-            { DeviceKeys.FOUR, 25 },
-            { DeviceKeys.R, 26 },
-            { DeviceKeys.F, 27 },
-            { DeviceKeys.C, 28 },
+            { DeviceKeys.TWO, 12 },
 
-            { DeviceKeys.FIVE, 30 },
-            { DeviceKeys.T, 31 },
-            { DeviceKeys.G, 32 },
-            { DeviceKeys.V, 33 },
+            { DeviceKeys.W, 13 },
 
-            { DeviceKeys.SIX, 34 },
-            { DeviceKeys.Y, 35 },
-            { DeviceKeys.H, 36 },
-            { DeviceKeys.B, 37 },
+            { DeviceKeys.S, 14 },
 
-            { DeviceKeys.SEVEN, 50  },
-            { DeviceKeys.U, 51 },
-            { DeviceKeys.J, 52 },
-            { DeviceKeys.N, 53 },
+            { DeviceKeys.Z, 15 },
 
-            { DeviceKeys.EIGHT, 55  },
-            { DeviceKeys.I, 56 },
-            { DeviceKeys.K, 57 },
-            { DeviceKeys.M, 58 },
+            { DeviceKeys.LEFT_ALT, 16 },
 
-            { DeviceKeys.NINE, 61  },
+            { DeviceKeys.F2, 17 },
+
+            { DeviceKeys.THREE, 18 },
+
+
+            { DeviceKeys.E, 19 },
+
+            { DeviceKeys.D, 20 },
+
+            { DeviceKeys.C, 21 },
+
+
+            //{ DeviceKeys.ARROW_DOWN, 22 },
+
+
+            { DeviceKeys.F3, 23 },
+
+            { DeviceKeys.FOUR, 24 },
+
+            { DeviceKeys.R, 25 },
+
+            { DeviceKeys.C, 27 },
+
+            { DeviceKeys.F4, 28 },
+
+            { DeviceKeys.FIVE, 29 },
+
+            { DeviceKeys.T, 30 },
+
+            { DeviceKeys.G, 31 },
+
+            { DeviceKeys.V, 32 },
+
+            { DeviceKeys.SIX, 33 },
+
+            { DeviceKeys.Y, 34 },
+
+            { DeviceKeys.H, 35 },
+
+            { DeviceKeys.B, 36 },
+
+            { DeviceKeys.SPACE, 37 },
+
+            //{ DeviceKeys.ARROW_DOWN, 38 },
+
+            { DeviceKeys.F5, 48 },
+
+            { DeviceKeys.SEVEN, 49  },
+
+            { DeviceKeys.U, 50 },
+
+            { DeviceKeys.J, 51 },
+
+            { DeviceKeys.N, 52 },
+
+            { DeviceKeys.F6, 53  },
+
+            { DeviceKeys.EIGHT, 54 },
+
+            { DeviceKeys.I, 55 },
+
+            { DeviceKeys.K, 56 },
+
+            { DeviceKeys.M, 57 },
+
             { DeviceKeys.O, 62 },
             { DeviceKeys.L, 63 },
             { DeviceKeys.COMMA, 64 },
