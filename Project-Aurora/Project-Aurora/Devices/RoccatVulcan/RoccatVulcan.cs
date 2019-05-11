@@ -235,8 +235,11 @@ namespace Aurora.Devices.RoccatVulcan
             { DeviceKeys.ESC, 0 },
             { DeviceKeys.TILDE, 1 },
             { DeviceKeys.TAB, 2 },
-            { DeviceKeys.LEFT_SHIFT, 3 },
+            { DeviceKeys.LEFT_SHIFT, 4 },
+            { DeviceKeys.CAPS_LOCK, 3 },
             { DeviceKeys.LEFT_CONTROL, 5 },
+
+            { DeviceKeys.LEFT_WINDOWS, 10 },
 
             { DeviceKeys.ONE, 6 },
             { DeviceKeys.TWO, 12 },
@@ -270,8 +273,6 @@ namespace Aurora.Devices.RoccatVulcan
             { DeviceKeys.Q, 7 },
             { DeviceKeys.A, 8 },
 
-            //{ DeviceKeys.ARROW_DOWN, 9 },
-
             
 
             
@@ -292,10 +293,7 @@ namespace Aurora.Devices.RoccatVulcan
 
             { DeviceKeys.D, 20 },
 
-            { DeviceKeys.C, 21 },
-
-
-            //{ DeviceKeys.ARROW_DOWN, 22 },
+            { DeviceKeys.X, 21 },
 
             
 
@@ -303,7 +301,7 @@ namespace Aurora.Devices.RoccatVulcan
 
             { DeviceKeys.R, 25 },
 
-            //{ DeviceKeys.C, 27 },
+            { DeviceKeys.C, 27 },
             
 
             
@@ -322,8 +320,6 @@ namespace Aurora.Devices.RoccatVulcan
             { DeviceKeys.B, 36 },
 
             { DeviceKeys.SPACE, 37 },
-
-            //{ DeviceKeys.ARROW_DOWN, 38 },
             
              
 
@@ -347,13 +343,13 @@ namespace Aurora.Devices.RoccatVulcan
 
             { DeviceKeys.L, 62 },
 
-            
+            { DeviceKeys.F, 26 },
 
             { DeviceKeys.P, 67 },
 
             { DeviceKeys.PERIOD, 69 },
 
-            //{ DeviceKeys.RIGHT_MENU, 70 },
+            { DeviceKeys.RIGHT_ALT, 70 },
 
             { DeviceKeys.MINUS, 72 },
 
@@ -361,14 +357,14 @@ namespace Aurora.Devices.RoccatVulcan
 
             //{ DeviceKeys.QUOTE, 74 },
 
-            //{ DeviceKeys.FORWARD_SLASH, 75 },
+            { DeviceKeys.FORWARD_SLASH, 75 },
             
 
-            { DeviceKeys.OEMPlus, 79 },
+            { DeviceKeys.EQUALS, 79 },
 
             { DeviceKeys.CLOSE_BRACKET, 80 },
 
-            //{ DeviceKeys.FORWARD_SLASH, 81 },
+            { DeviceKeys.BACKSLASH, 81 },
 
             { DeviceKeys.RIGHT_SHIFT, 82 },
 
@@ -380,7 +376,7 @@ namespace Aurora.Devices.RoccatVulcan
 
             { DeviceKeys.RIGHT_CONTROL, 89 },
 
-            { DeviceKeys.PRINT_SCREEN, 90 },
+            { DeviceKeys.PRINT_SCREEN, 99 },
 
             { DeviceKeys.INSERT, 100 },
 
@@ -397,6 +393,10 @@ namespace Aurora.Devices.RoccatVulcan
             { DeviceKeys.ARROW_UP, 106 },
 
             { DeviceKeys.ARROW_DOWN, 107 },
+
+            { DeviceKeys.PAUSE_BREAK, 108 },
+
+            { DeviceKeys.PAGE_UP, 109 },
 
             { DeviceKeys.PAGE_DOWN, 110 },
 
@@ -428,7 +428,7 @@ namespace Aurora.Devices.RoccatVulcan
 
             { DeviceKeys.NUM_THREE, 127 },
 
-            //{ DeviceKeys.num_decimal, 128 },
+            //{ DeviceKeys.numdecimal, 128 },
 
             { DeviceKeys.NUM_MINUS, 129 },
 
