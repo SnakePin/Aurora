@@ -17,9 +17,6 @@ namespace Aurora.Devices.RoccatVulcan
         private String devicename = "Roccat Vulcan";
         private bool isInitialized = false;
 
-        private bool keyboard_updated = false;
-        private VariableRegistry default_registry = null;
-
         private readonly object action_lock = new object();
 
         private System.Diagnostics.Stopwatch watch = new System.Diagnostics.Stopwatch();
@@ -67,7 +64,6 @@ namespace Aurora.Devices.RoccatVulcan
                             ctrl_device.OpenDevice();
                             ctrl_device_leds.OpenDevice();
 
-
                             bool success =
                                 rv_get_ctrl_report(0x0f) &&
                                 rv_set_ctrl_report(0x15) &&
@@ -88,7 +84,6 @@ namespace Aurora.Devices.RoccatVulcan
                                 rv_wait_for_ctrl_device() &&
                                 rv_set_ctrl_report(0x13) &&
                                 rv_wait_for_ctrl_device();
-
 
                             isInitialized = true;
                         }
@@ -142,10 +137,7 @@ namespace Aurora.Devices.RoccatVulcan
 
         public void Reset()
         {
-            if (this.IsInitialized() && keyboard_updated)
-            {
-                keyboard_updated = false;
-            }
+            throw new NotImplementedException();
         }
 
         public bool Reconnect()
@@ -269,11 +261,6 @@ namespace Aurora.Devices.RoccatVulcan
             { DeviceKeys.T, 31 },
             { DeviceKeys.G, 32 },
             { DeviceKeys.V, 33 },
-
-            { DeviceKeys.SIX, 34 },
-            { DeviceKeys.Y, 35 },
-            { DeviceKeys.H, 36 },
-            { DeviceKeys.B, 37 },
 
             { DeviceKeys.SIX, 34 },
             { DeviceKeys.Y, 35 },
