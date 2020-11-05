@@ -54,24 +54,46 @@ namespace Aurora.Devices.Drevo
                  * 108-121 bottom right to left
                  * 122-126 left bottom to top
                 */
-
-                void MapLightbarTo(DeviceKeys deviceKey, int i1, int i2)
-                {
-                    if (key.Key == deviceKey)
-                    {
-                        for (int i = i1; i <= i2; i++)
-                        {
-                            bitmap_snk.SetColorByDrevoIndex(i, key.Value.R, key.Value.G, key.Value.B);
-                        }
-                    }
-                }
-
+                var keyMappingsCustom = new List<KeyValuePair<DeviceKeys, int>>();
+                void MapLightbarTo(DeviceKeys deviceKey, int i1, int i2) { for (int i = i1; i <= i2; i++) { keyMappingsCustom.Add(new KeyValuePair<DeviceKeys, int>(deviceKey, i)); } }
+                void MapLightbarToMULTI(DeviceKeys d1, int i1, int i2) { for (int i = i1; i <= i2; i++) { keyMappingsCustom.Add(new KeyValuePair<DeviceKeys, int>((DeviceKeys)((int)d1 + (i - i1)), i)); } }
                 if (keyboard.LayoutNumber == 0) //Blademaster TE(?)
                 {
-                    MapLightbarTo(DeviceKeys.SPACE, 108, 121);  //bottom
-                    MapLightbarTo(DeviceKeys.F7, 87, 100);  //top
-                    MapLightbarTo(DeviceKeys.CAPS_LOCK, 122, 126);  //left
-                    MapLightbarTo(DeviceKeys.PAGE_DOWN, 102, 106);  //right
+                    //BOTTOM
+                    MapLightbarTo(DeviceKeys.LEFT_CONTROL, 121, 121);
+                    MapLightbarTo(DeviceKeys.LEFT_WINDOWS, 120, 120);
+                    MapLightbarTo(DeviceKeys.LEFT_ALT, 119, 119);
+                    MapLightbarTo(DeviceKeys.SPACE, 115, 118);
+                    MapLightbarTo(DeviceKeys.RIGHT_ALT, 114, 114);
+                    MapLightbarTo(DeviceKeys.APPLICATION_SELECT, 113, 113);
+                    MapLightbarTo(DeviceKeys.FN_Key, 112, 112);
+                    MapLightbarTo(DeviceKeys.RIGHT_CONTROL, 111, 111);
+                    MapLightbarTo(DeviceKeys.ARROW_LEFT, 110, 110);
+                    MapLightbarTo(DeviceKeys.ARROW_DOWN, 109, 109);
+                    MapLightbarTo(DeviceKeys.ARROW_RIGHT, 108, 108);
+
+                    //TOP
+                    MapLightbarToMULTI(DeviceKeys.ESC, 87, 100);
+
+                    //LEFT
+                    MapLightbarTo(DeviceKeys.LEFT_CONTROL, 122, 122);
+                    MapLightbarTo(DeviceKeys.LEFT_SHIFT, 123, 123);
+                    MapLightbarTo(DeviceKeys.CAPS_LOCK, 124, 124);
+                    MapLightbarTo(DeviceKeys.TAB, 125, 125);
+                    MapLightbarTo(DeviceKeys.TILDE, 126, 126);
+
+                    //RIGHT
+                    MapLightbarTo(DeviceKeys.PAUSE_BREAK, 102, 102);
+                    MapLightbarTo(DeviceKeys.PAGE_UP, 103, 103);
+                    MapLightbarTo(DeviceKeys.PAGE_DOWN, 104, 104);
+                    MapLightbarTo(DeviceKeys.ARROW_RIGHT, 105, 105);
+                    MapLightbarTo(DeviceKeys.ARROW_RIGHT, 106, 106);
+                }
+
+                var customMapping = keyMappingsCustom.Where(x => x.Key == key.Key);
+                foreach (var item in customMapping)
+                {
+                    bitmap_snk.SetColorByDrevoIndex(item.Value, key.Value.R, key.Value.G, key.Value.B);
                 }
 
                 int index = AuroraToDrevoBitmap((int)key.Key, keyboard.LayoutNumber);
