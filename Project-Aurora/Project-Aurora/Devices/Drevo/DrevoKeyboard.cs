@@ -5,6 +5,7 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Windows;
 
 namespace Aurora.Devices.Drevo
 {
@@ -36,7 +37,7 @@ namespace Aurora.Devices.Drevo
         DrevoKeyboard(HidDevice device)
         {
             keyboardDevice = device;
-            LayoutNumber = DrevoKeyboardProducts.First(x => x.VendorID == keyboardDevice.VendorID && x.ProductID == keyboardDevice.ProductID).LayoutNumber;
+            LayoutNumber = DrevoKeyboardProducts.First(x => x.VendorID == device.VendorID && x.ProductID == device.ProductID).LayoutNumber;
         }
 
         ~DrevoKeyboard()
@@ -54,20 +55,11 @@ namespace Aurora.Devices.Drevo
                 //TODO: x.GetReportDescriptor().DeviceItems.Any(x => x.CollectionType == 4)
                 return VIDs.Contains(x.VendorID) && PIDs.Contains(x.ProductID) && x.DevicePath.Contains("col04") && x.GetMaxFeatureReportLength() >= 8;
             });
+
             return devices.Select(x => new DrevoKeyboard(x));
         }
 
-        public int LayoutNumber
-        {
-            get
-            {
-                return LayoutNumber;
-            }
-            private set
-            {
-                LayoutNumber = value;
-            }
-        }
+        public int LayoutNumber { get; private set; }
 
         public bool Connect()
         {

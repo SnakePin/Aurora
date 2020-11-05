@@ -7,7 +7,6 @@ using System.Threading.Tasks;
 
 namespace Aurora.Devices.Drevo
 {
-
     class DrevoBitmap
     {
         const int bufferSize = 392;
@@ -55,17 +54,20 @@ namespace Aurora.Devices.Drevo
                 byte[] dataBuffer = new byte[8];
 
                 dataBuffer[0] = 5; // set report ID to 5
-                Array.Copy(buffer, bitmapArrayIndex + 4, dataBuffer, 5, 3); //second key's rgb value
 
                 if (sentPacketCount > 0)
                 {
-                    Array.Copy(buffer, bitmapArrayIndex, dataBuffer, 2, 4); // set 3,4,5,6th bytes to 4 bytes from buffer[bitmapArrayIndex]
+                    Array.Copy(buffer, bitmapArrayIndex, dataBuffer, 2, 4);
+                    Array.Copy(buffer, bitmapArrayIndex+4, dataBuffer, 6, 2);
+                    dataBuffer[1] = 0;
                     bitmapArrayIndex += 6;
                 }
                 else
                 {
-                    Array.Copy(buffer, bitmapArrayIndex, dataBuffer, 1, 4); // set 2,3,4,5th bytes to 4 bytes from buffer[bitmapArrayIndex]
-                    dataBuffer[7] = 0;
+                    Array.Copy(buffer, bitmapArrayIndex, dataBuffer, 1, 4);
+                    Array.Copy(buffer, bitmapArrayIndex + 4, dataBuffer, 5, 2);
+                    Array.Copy(buffer, bitmapArrayIndex + 6, dataBuffer, 7, 1);
+
                     bitmapArrayIndex += 7;
                 }
 
@@ -74,6 +76,5 @@ namespace Aurora.Devices.Drevo
 
             return true;
         }
-
     }
 }
