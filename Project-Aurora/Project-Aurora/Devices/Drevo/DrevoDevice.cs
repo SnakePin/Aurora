@@ -6,6 +6,7 @@ using System.Drawing;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Windows;
 using Aurora.Settings;
 
 namespace Aurora.Devices.Drevo
@@ -47,6 +48,32 @@ namespace Aurora.Devices.Drevo
         {
             foreach (var key in keyColors)
             {
+                /*
+                 * 87-100 top left to right
+                 * 102-106 right top to bottom
+                 * 108-121 bottom right to left
+                 * 122-126 left bottom to top
+                */
+
+                void MapLightbarTo(DeviceKeys deviceKey, int i1, int i2)
+                {
+                    if (key.Key == deviceKey)
+                    {
+                        for (int i = i1; i <= i2; i++)
+                        {
+                            bitmap_snk.SetColorByDrevoIndex(i, key.Value.R, key.Value.G, key.Value.B);
+                        }
+                    }
+                }
+
+                if (keyboard.LayoutNumber == 0) //Blademaster TE(?)
+                {
+                    MapLightbarTo(DeviceKeys.SPACE, 108, 121);  //bottom
+                    MapLightbarTo(DeviceKeys.F7, 87, 100);  //top
+                    MapLightbarTo(DeviceKeys.CAPS_LOCK, 122, 126);  //left
+                    MapLightbarTo(DeviceKeys.PAGE_DOWN, 102, 106);  //right
+                }
+
                 int index = AuroraToDrevoBitmap((int)key.Key, keyboard.LayoutNumber);
                 if (index != -1)
                 {
